@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EVE Offline 2D</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000000; /*#0a0e1a;*/
+      color: #f1f5f9;
+      overflow: hidden;
+    }
+    #ui { position: relative; width: 100vw; height: 100vh; }
+    canvas { display: block; width: 100%; height: 100%; }
+    
+    #sidePanel {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: 300px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 90vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    
+    .panel {
+      margin-bottom: 15px;
+      padding: 10px;
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 4px;
+    }
+    
+    .panel h3 {
+      font-size: 12px;
+      color: #06b6d4;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .panel ul {
+      list-style: none;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #cbd5e1;
+    }
+    
+    .panel ul li {
+      margin-bottom: 3px;
+    }
+    
+    button {
+      background: #1e3a4e;
+      color: #f1f5f9;
+      border: 1px solid #475569;
+      border-radius: 3px;
+      padding: 4px 8px;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #2d5571;
+      border-color: #64748b;
+    }
+    
+    button:active {
+      transform: scale(0.98);
+    }
+    
+    #fullscreenBtn {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      width: 28px;
+      height: 28px;
+      background: rgba(30, 58, 78, 0.7);
+      color: #f1f5f9;
+      border: 1px solid rgba(71, 85, 105, 0.7);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0;
+      z-index: 1000;
+      border-radius: 4px;
+      opacity: 0.8;
+      transition: all 0.2s;
+    }
+    
+    #fullscreenBtn:hover {
+      background: rgba(45, 85, 113, 0.9);
+      border-color: #64748b;
+      opacity: 1;
+    }
+    
+    .circularBtn {
+      position: absolute;
+      bottom: 10px;
+      width: 50px;
+      height: 50px;
+      background: rgba(30, 58, 78, 0.85);
+      color: #f1f5f9;
+      border: 2px solid rgba(71, 85, 105, 0.8);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 0;
+      z-index: 1000;
+      border-radius: 50%;
+      opacity: 0.9;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.2;
+      font-weight: bold;
+    }
+    
+    .circularBtn:hover {
+      background: rgba(45, 85, 113, 0.95);
+      border-color: #64748b;
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    
+    .circularBtn.active {
+      background: rgba(22, 101, 52, 0.9);
+      border-color: #16a34a;
+    }
+    
+    #stationWindow::-webkit-scrollbar,
+    #sidePanel::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    #stationWindow::-webkit-scrollbar-track,
+    #sidePanel::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+    }
+    
+    #stationWindow::-webkit-scrollbar-thumb,
+    #sidePanel::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+    
+    #stationWindow::-webkit-scrollbar-thumb:hover,
+    #sidePanel::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <audio id="bgm" loop>
+    <source src="bgm/But Still We Go On.mp3" type="audio/mpeg">
+  </audio>
+  
+  <div id="ui">
+    <canvas id="game"></canvas>
+    
+    <!-- Fullscreen button -->
+    <button id="fullscreenBtn" title="Toggle Fullscreen">⛶</button>
+    
+    <!-- Grid Toggle button (above star map button) -->
+    <button id="gridToggleBtn" class="circularBtn" style="left: calc(50% - 210px); bottom: 70px;" title="Toggle Grid">⊞<br>Grid</button>
+    
+    <!-- Star Map button (left of ship status, centered) -->
+    <button id="starMapBtn" class="circularBtn" style="left: calc(50% - 210px);" title="Star Map (N)">📍<br>Map</button>
+    
+    <!-- Auto Fire button (right of ship status, centered) -->
+    <button id="autoFireBtn" class="circularBtn" style="left: calc(50% + 150px);" title="Toggle Auto-Fire">🎯<br>Fire</button>
+    
+    <!-- Auto Mine button (stacked on top of fire button) -->
+    <button id="autoMineBtn" class="circularBtn" style="left: calc(50% + 150px); bottom: 70px;" title="Toggle Auto-Mine">⛏️<br>Mine</button>
+    
+    <!-- Bottom right panel - Always visible ship status -->
+    <div id="sidePanel">
+      <button id="sidePanelToggle" style="position:absolute;top:5px;right:5px;width:22px;height:22px;background:rgba(30,58,78,0.7);color:#f1f5f9;border:1px solid rgba(71,85,105,0.7);cursor:pointer;font-size:14px;padding:0;z-index:10;opacity:0.8;transition:all 0.2s;">-</button>
+      
+      <div id="sidePanelContent">
+        <div class="panel">
+          <h3>Cargo Hold</h3>
+          <div id="cargo"></div>
+        </div>
+      
+        <div class="panel">
+          <h3>Fitted Modules</h3>
+          <div id="fitting"></div>
+        </div>
+      
+        <div class="panel">
+          <h3>Controls</h3>
+          <ul>
+            <li><strong>W/S</strong> - Thrust Forward/Back</li>
+            <li><strong>A/D</strong> - Turn Left/Right</li>
+            <li><strong>Space</strong> - Fire Weapons</li>
+            <li><strong>M</strong> - Activate Mining Lasers</li>
+            <li><strong>Click</strong> - Select Target</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Station window - Only visible when docked -->
+    <div id="stationWindow" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,0.95);border:2px solid #475569;border-radius:8px;width:700px;max-height:80vh;overflow-y:auto;padding:20px;z-index:100;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+      <button id="stationWindowClose" style="position:absolute;top:10px;right:10px;width:30px;height:30px;background:#dc2626;color:#fff;border:1px solid #991b1b;cursor:pointer;font-size:18px;padding:0;border-radius:4px;font-weight:bold;">×</button>
+      
+      <h2 style="margin:0 0 20px 0;color:#06b6d4;font-size:24px;text-align:center;" id="stationWindowTitle">Station Services</h2>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+        <div class="panel" style="margin:0;">
+          <h3>Market</h3>
+          <div id="market"></div>
+        </div>
+        
+        <div class="panel" style="margin:0;">
+          <h3>Station Inventory</h3>
+          <div id="stationInventory"></div>
+        </div>
+        
+        <div class="panel" style="margin:0;">
+          <h3>Ship Hangar</h3>
+          <div id="hangar"></div>
+        </div>
+        
+        <div class="panel" style="margin:0;">
+          <h3>Ship Fitting</h3>
+          <div id="shop"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Wreck window - Only visible when looting -->
+    <div id="wreckWindow" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,0.95);border:2px solid #475569;border-radius:8px;width:600px;max-height:70vh;overflow-y:auto;padding:20px;z-index:100;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+      <button id="wreckWindowClose" style="position:absolute;top:10px;right:10px;width:30px;height:30px;background:#dc2626;color:#fff;border:1px solid #991b1b;cursor:pointer;font-size:18px;padding:0;border-radius:4px;font-weight:bold;">×</button>
+      
+      <h2 style="margin:0 0 20px 0;color:#94a3b8;font-size:24px;text-align:center;" id="wreckWindowTitle">Wreck Cargo</h2>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+        <div class="panel" style="margin:0;">
+          <h3>Wreck Contents</h3>
+          <div id="wreckCargo"></div>
+        </div>
+        
+        <div class="panel" style="margin:0;">
+          <h3>Your Cargo Hold</h3>
+          <div id="wreckPlayerCargo"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Star Map window -->
+    <div id="starMapWindow" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,0.95);border:2px solid #475569;border-radius:8px;width:800px;max-height:85vh;overflow-y:auto;padding:20px;z-index:100;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+      <button id="starMapClose" style="position:absolute;top:10px;right:10px;width:30px;height:30px;background:#dc2626;color:#fff;border:1px solid #991b1b;cursor:pointer;font-size:18px;padding:0;border-radius:4px;font-weight:bold;">×</button>
+      
+      <h2 style="margin:0 0 10px 0;color:#06b6d4;font-size:24px;text-align:center;">Star Map</h2>
+      <div style="text-align:center;font-size:11px;color:#64748b;margin-bottom:15px;">Drag to pan • Scroll to zoom</div>
+      
+      <div id="starMapContent"></div>
+    </div>
+  </div>
+
+  <script src="items.js"></script>
+  <script src="systems.js"></script>
+  <script src="ships.js"></script>
+  <script src="weapons.js"></script>
+  <script src="modules.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
