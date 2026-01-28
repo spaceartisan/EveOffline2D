@@ -9,6 +9,7 @@ const SHIP_CLASSES = {
   'Atron': {
     class: 'Frigate',
     name: 'Atron',
+    faction: 'Gallente',
     description: 'A versatile Gallente frigate with balanced stats',
     
     // Movement
@@ -35,9 +36,6 @@ const SHIP_CLASSES = {
     capRegen: 1.4,
     cargoCap: 120,
     
-    // Mining
-    miningYield: 8,
-    
     // Economy
     price: 50000
   },
@@ -45,6 +43,7 @@ const SHIP_CLASSES = {
   'Tristan': {
     class: 'Frigate',
     name: 'Tristan',
+    faction: 'Gallente',
     description: 'A drone-focused frigate with strong capacitor',
     
     // Movement
@@ -71,9 +70,7 @@ const SHIP_CLASSES = {
     capRegen: 1.8,
     cargoCap: 100,
     
-    // Mining
-    miningYield: 8,
-    
+
     // Economy
     price: 55000
   },
@@ -81,6 +78,7 @@ const SHIP_CLASSES = {
   'Rifter': {
     class: 'Frigate',
     name: 'Rifter',
+    faction: 'Minmatar',
     description: 'A nimble Minmatar frigate focused on speed',
     
     // Movement
@@ -107,9 +105,7 @@ const SHIP_CLASSES = {
     capRegen: 1.2,
     cargoCap: 110,
     
-    // Mining
-    miningYield: 8,
-    
+
     // Economy
     price: 48000
   },
@@ -118,6 +114,7 @@ const SHIP_CLASSES = {
   'Velator': {
     class: 'Frigate',
     name: 'Velator',
+    faction: 'Gallente',
     description: 'A basic starter frigate - cheap and reliable',
     
     // Movement
@@ -144,11 +141,84 @@ const SHIP_CLASSES = {
     capRegen: 1.2,
     cargoCap: 100,
     
-    // Mining
-    miningYield: 8,
-    
     // Economy
     price: 0 // Starting ship, free
+  },
+  
+  // ===== BATTLECRUISERS =====
+  // Heavy combat ships with strong defenses
+  
+  'Ferox': {
+    class: 'Battlecruiser',
+    name: 'Ferox',
+    faction: 'Caldari',
+    description: 'A powerful Caldari battlecruiser with strong shields and hybrid weapons',
+    
+    // Movement
+    maxSpeed: 1.8,
+    sublightSpeed: 1.8,
+    warpSpeed: 3,
+    accel: 0.06,
+    turnRate: 0.025,
+    drag: 0.96,
+    
+    // Defense
+    maxShield: 900,
+    shieldRegen: 4.5,
+    maxArmor: 500,
+    maxHull: 400,
+    
+    // Offense
+    dmg: 65,
+    fireRate: 50,
+    maxRange: 850,
+    
+    // Resources
+    maxCap: 800,
+    capRegen: 8.0,
+    cargoCap: 450,
+    
+
+    // Economy
+    price: 1500000
+  },
+  
+  // ===== BATTLESHIPS =====
+  // Massive capital ships with devastating firepower
+  
+  'Apocalypse': {
+    class: 'Battleship',
+    name: 'Apocalypse',
+    faction: 'Amarr',
+    description: 'A legendary Amarr battleship with heavy armor and devastating energy weapons',
+    
+    // Movement
+    maxSpeed: 1.2,
+    sublightSpeed: 1.2,
+    warpSpeed: 2.5,
+    accel: 0.04,
+    turnRate: 0.015,
+    drag: 0.95,
+    
+    // Defense
+    maxShield: 800,
+    shieldRegen: 3.5,
+    maxArmor: 1200,
+    maxHull: 900,
+    
+    // Offense
+    dmg: 120,
+    fireRate: 80,
+    maxRange: 1000,
+    
+    // Resources
+    maxCap: 1200,
+    capRegen: 12.0,
+    cargoCap: 600,
+    
+
+    // Economy
+    price: 4500000
   },
   
   // ===== FUTURE SHIP CLASSES =====
@@ -178,6 +248,7 @@ function createShipFromTemplate(templateName) {
     shipClass: template.class,
     shipName: template.name,
     shipDescription: template.description,
+    shipFaction: template.faction || 'None',
     
     // Movement
     maxSpeed: template.maxSpeed,

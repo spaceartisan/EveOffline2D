@@ -26,56 +26,69 @@ Add a new entry to the `SHIP_CLASSES` object:
 
 ```javascript
 'YourShipName': {
-  shipName: 'YourShipName',
   class: 'Frigate',  // or Destroyer, Cruiser, Battlecruiser, Battleship
-  shipDescription: 'Description of your ship',
-  
-  // Defense
-  maxShield: 500,
-  maxArmor: 300,
-  maxHull: 200,
-  shieldRegen: 2.0,
+  name: 'YourShipName',
+  faction: 'Gallente', // or Caldari, Amarr, Minmatar (affects ship color)
+  description: 'Description of your ship',
   
   // Movement
-  maxSpeed: 200,
-  sublightSpeed: 200,
-  accel: 0.5,
-  turnRate: 0.04,
-  drag: 0.95,
+  maxSpeed: 3.5,
+  sublightSpeed: 3.5,
+  warpSpeed: 4,
+  accel: 0.12,
+  turnRate: 0.05,
+  drag: 0.98,
   
-  // Combat
-  dmg: 15,
-  fireRate: 90,
-  fireCooldown: 0,
-  maxRange: 600,
+  // Defense
+  maxShield: 120,
+  shieldRegen: 0.6,
+  maxArmor: 90,
+  maxHull: 70,
   
-  // Mining
-  miningYield: 10,
-  miningCooldown: 0,
+  // Offense
+  dmg: 18,
+  fireRate: 18,
+  maxRange: 550,
   
   // Resources
-  cap: 500,
-  maxCap: 500,
-  capRegen: 2.0,
-  cargoCap: 200,
+  maxCap: 120,
+  capRegen: 1.4,
+  cargoCap: 120,
   
   // Economy
   price: 50000  // Cost to buy at station
 }
 ```
 
+### Important Changes in Ship System
+
+**⚠️ Mining Yield Removed from Ships**
+- Mining yield is now determined by equipped mining lasers only
+- Ships no longer have a `miningYield` property
+- Use `Miner I` (yield: 1) or `Miner II` (yield: 4) weapons instead
+
+**Ship Factions and Colors**
+- Each ship has a `faction` property (Caldari, Amarr, Gallente, Minmatar)
+- Ships are automatically colored based on faction:
+  - Caldari: Indigo (#6366f1)
+  - Amarr: Gold (#f59e0b)
+  - Gallente: Green (#10b981)
+  - Minmatar: Orange (#f97316)
+  - Pirates: Red (#dc2626)
+
 ### Modifying Existing Ships
 
 Find the ship in `SHIP_CLASSES` and adjust any values. Common tweaks:
 - **More tanky:** Increase `maxShield`, `maxArmor`, `maxHull`, `shieldRegen`
-- **Faster:** Increase `maxSpeed`, `accel`, decrease `drag` (keep between 0.9-0.98)
+- **Faster:** Increase `maxSpeed`, `accel`, `warpSpeed`, decrease `drag` (keep between 0.95-0.98)
 - **Better damage:** Increase `dmg`, decrease `fireRate` (lower = faster firing)
-- **Better mining:** Increase `miningYield`, decrease `miningCooldown`
+- **More capacitor:** Increase `maxCap`, `capRegen`
+- **More cargo:** Increase `cargoCap`
 
 ### Removing a Ship
 
 1. Delete the ship entry from `SHIP_CLASSES` in `ships.js`
-2. Remove it from `playerHangar` array in `main.js` if it's a starting ship
+2. Remove it from any starting inventory if applicable
 
 ---
 
@@ -89,32 +102,60 @@ Add to the `WEAPON_MODULES` object:
 
 ```javascript
 'YourWeaponName': {
+  type: 'weapon',
+  category: 'turret',  // or 'missile', 'mining'
+  size: 'small',       // or 'medium', 'large'
   name: 'Your Weapon Name',
-  type: 'turret',  // or 'missile', 'laser'
-  size: 'small',   // or 'medium', 'large'
+  description: 'A description of your weapon',
   
-  // Stats
+  // Combat Stats
   damage: 25,
+  fireRate: 30,        // Frames between shots (lower = faster)
   maxRange: 800,
-  fireRate: 120,  // Ticks between shots (60 = 1 second)
+  optimalRange: 600,   // Range for best accuracy
+  capacitorUse: 5,
   
-  // Fitting
+  // Fitting Requirements
   powergridUsage: 15,
   cpuUsage: 25,
   
   // Economy
-  price: 25000,
+  price: 25000
+}
+```
+
+### Mining Lasers
+
+Mining lasers are weapons with special properties:
+
+```javascript
+'Miner III': {
+  type: 'weapon',
+  category: 'mining',
+  size: 'small',
+  name: 'Miner III',
+  description: 'Advanced mining laser',
   
-  // Description
-  description: 'A description of your weapon'
+  damage: 0,
+  fireRate: 25,
+  maxRange: 500,
+  optimalRange: 500,
+  capacitorUse: 5,
+  
+  miningYield: 8,  // Ore units per cycle
+  
+  powergridUsage: 3,
+  cpuUsage: 20,
+  price: 50000
 }
 ```
 
 ### Weapon Balance Tips
 - **DPS calculation:** `DPS = (damage / fireRate) * 60`
-- **Small weapons:** 10-20 damage, 60-90 fire rate, 500-700 range
-- **Medium weapons:** 20-35 damage, 90-120 fire rate, 700-900 range
-- **Large weapons:** 35-60 damage, 120-180 fire rate, 900-1200 range
+- **Small weapons:** 10-20 damage, 15-30 fire rate, 500-700 range
+- **Medium weapons:** 20-35 damage, 30-50 fire rate, 700-900 range
+- **Large weapons:** 35-60 damage, 50-80 fire rate, 900-1200 range
+- **Mining yield:** Miner I = 1, Miner II = 4 (adjust for progression)
 
 ---
 
@@ -255,7 +296,7 @@ this.despawnTimer = 18000;  // 5 minutes (300 seconds * 60 ticks)
 
 ### Adding a New System
 
-Add to the `SYSTEM_DATA` array:
+Add to the `SYSTEM_DATA` array in `systems.js`:
 
 ```javascript
 {
@@ -268,11 +309,21 @@ Add to the `SYSTEM_DATA` array:
     name: 'Your Station Name'
   },
   mapX: 400,                  // X position on star map
-  mapY: 300                   // Y position on star map
+  mapY: 300,                  // Y position on star map
+  color: '#3b82f6',          // Hex color for station/gates
+  category: 'trading'         // Station type (see below)
 }
 ```
 
-**Important:** Update the `gates` arrays of other systems to connect to your new system.
+**Station Categories:**
+Choose from: `navy`, `academy`, `treasury`, `industrial`, `trading`, `moon`, `outpost`, `military`, `sovereignty`, `citadel`, `mining`, `logistics`, `staging`
+
+Each category has a unique visual design in-game.
+
+**Important:** 
+- Update the `gates` arrays of other systems to connect to your new system
+- Gate colors automatically match the destination system
+- Each system spawns 2-4 nebulas with pulsing animations
 
 ### System Security Levels
 - **1.0 - 0.5:** High security (safe, low rewards)
@@ -396,21 +447,38 @@ player.warpCooldown = 300;    // Cooldown after warp (5 seconds)
 
 ### Mining Speed
 
-In ship definitions (`ships.js`):
+Mining yield is now determined by equipped mining lasers in `weapons.js`:
 
 ```javascript
-miningYield: 10,        // Units per mining cycle
-miningCooldown: 0       // Cooldown between mining cycles
+'Miner I': {
+  miningYield: 1,       // 1 ore unit per mining cycle
+  fireRate: 30,         // Frames between mining cycles
+}
+'Miner II': {
+  miningYield: 4,       // 4 ore units per mining cycle
+  fireRate: 28,
+}
 ```
+
+**Note:** Ships no longer have a `miningYield` property - it's purely weapon-based now.
 
 ### Weapon Firing
 
 In weapon definitions (`weapons.js`):
 
 ```javascript
-fireRate: 90,           // Ticks between shots (90 = 1.5 seconds)
-damage: 20              // Damage per shot
+fireRate: 18,           // Frames between shots (18 = 0.3 seconds at 60 FPS)
+damage: 20,             // Damage per shot
+capacitorUse: 5         // Capacitor drained per shot
 ```
+
+### Auto-Combat & Auto-Mining
+
+Toggle auto-fire and auto-mine using:
+- **Space bar** - Toggle auto-fire (attacks selected NPCs automatically)
+- **M key** - Toggle auto-mine (mines selected asteroids automatically)
+
+Both systems can be active simultaneously for mixed gameplay.
 
 ### Station Prices
 
@@ -445,15 +513,20 @@ const playerHangar = ['Velator'];  // Starting ships
 ## Tips for Balanced Gameplay
 
 ### Ship Balance Ratios
-- **Frigate → Destroyer:** 1.5x stats, 3x price
-- **Destroyer → Cruiser:** 2x stats, 3x price
-- **Cruiser → Battlecruiser:** 1.5x stats, 2x price
-- **Battlecruiser → Battleship:** 1.5x stats, 2x price
+- **Frigate → Battlecruiser:** 2-3x stats, 30x price
+- **Battlecruiser → Battleship:** 1.5x stats, 3x price
+
+**Current Ship Progression:**
+- Velator (Frigate, Free starter)
+- Atron/Tristan/Rifter (Frigates, 48-55k ISK)
+- Ferox (Battlecruiser, 1.5M ISK)
+- Apocalypse (Battleship, 4.5M ISK)
 
 ### Weapon Balance
-- Fitting costs should scale with damage
-- Range should decrease as damage increases (for balance)
-- Price should be ~1000 ISK per DPS
+- Fitting costs should scale with damage output
+- Mining laser yield progression: 1 → 4 → 8+
+- Combat weapon DPS should scale with ship class
+- Capacitor use should limit sustained fire
 
 ### Module Balance
 - Passive modules: Higher fitting cost, lower price
@@ -462,8 +535,15 @@ const playerHangar = ['Velator'];  // Starting ships
 
 ### Ore Balance
 - Rarer ores should be 2-3x price of previous tier
-- Spawn rates should be inverse to price
-- Size should increase slightly with value
+- Size increases with value (0.5-2.5 m³ range)
+- Rarity affects spawn frequency
+- Current progression: Veldspar (12 ISK) → Kernite (70 ISK)
+
+### Visual Consistency
+- Ship colors match factions (avoid pirate red)
+- Station colors match system colors
+- Gate colors match destination system
+- Asteroids have irregular rocky shapes
 
 ---
 

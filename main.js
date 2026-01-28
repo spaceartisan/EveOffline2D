@@ -30,6 +30,7 @@
       this.shipClass = stats.shipClass;
       this.shipName = stats.shipName;
       this.shipDescription = stats.shipDescription;
+      this.shipFaction = stats.shipFaction || 'None';
       
       // Movement
       this.maxSpeed = stats.maxSpeed;
@@ -62,7 +63,6 @@
       this.maxRange = stats.maxRange;
       
       // Mining
-      this.miningYield = stats.miningYield;
       this.miningCooldown = stats.miningCooldown;
       
       // Resources
@@ -74,7 +74,7 @@
       this.cargoUsed = 0; // Track current cargo space used
       
       // Economy (persistent across ship changes)
-      this.credits = 50000; // Starting credits
+      this.credits = 500000000; // Starting credits
       
       // Fitting system
       this.fittedModules = []; // Array of fitted module objects
@@ -96,6 +96,32 @@
       this.radius=8+Math.sqrt(amt/10);
       this.id=Math.random().toString(36).substr(2,9);
       this.oreType=oreType;
+      
+      // Generate irregular shape for realistic rocky appearance
+      // Creates 8-12 random points around the asteroid for jagged edges
+      this.shapePoints = [];
+      const numPoints = 8 + Math.floor(Math.random() * 5);
+      for(let i = 0; i < numPoints; i++){
+        const angle = (i / numPoints) * Math.PI * 2;
+        const radiusVar = this.radius * (0.7 + Math.random() * 0.5); // Random radius variance
+        this.shapePoints.push({
+          angle: angle,
+          dist: radiusVar
+        });
+      }
+      
+      // Add surface detail (craters and bumps) for visual depth
+      this.craters = [];
+      const numCraters = 2 + Math.floor(Math.random() * 3);
+      for(let i = 0; i < numCraters; i++){
+        this.craters.push({
+          angle: Math.random() * Math.PI * 2,
+          dist: this.radius * (0.3 + Math.random() * 0.4),
+          size: this.radius * (0.15 + Math.random() * 0.15)
+        });
+      }
+      
+      this.rotation = Math.random() * Math.PI * 2;
     } 
   }
 
@@ -115,22 +141,25 @@
   }
 
   class Stargate{
-    constructor(x,y,destSystem,name){
+    constructor(x,y,destSystem,name,color='#22d3ee'){
       this.x=x; this.y=y;
       this.destSystem=destSystem;
       this.name=name;
       this.radius=40;
       this.id=Math.random().toString(36).substr(2,9);
+      this.color=color;
     }
   }
 
   class Station{
-    constructor(x,y,name){
+    constructor(x,y,name,color='#3b82f6',category='outpost'){
       this.x=x; this.y=y;
       this.name=name;
       this.radius=60;
       this.id=Math.random().toString(36).substr(2,9);
       this.inventory = []; // Station storage inventory
+      this.color=color;
+      this.category=category;
     }
   }
 
@@ -283,12 +312,12 @@
       const x = 10000 + Math.cos(angle) * distance;
       const y = 10000 + Math.sin(angle) * distance;
       
-      sys.stargates.push(new Stargate(x, y, destIdx, `Gate to ${destSystem.name}`));
+      sys.stargates.push(new Stargate(x, y, destIdx, `Gate to ${destSystem.name}`, destSystem.color));
     });
     
     // Add station
     if (data.station) {
-      sys.stations.push(new Station(data.station.x, data.station.y, data.station.name));
+      sys.stations.push(new Station(data.station.x, data.station.y, data.station.name, data.color, data.category));
     }
   });
   
@@ -410,10 +439,43 @@
 
   // Controls
   const keys = {};
+  
+  // ===== KEYBOARD SHORTCUTS =====
+  // Get button references early so keyboard shortcuts can update button states
+  const autoFireBtn = document.getElementById('autoFireBtn');
+  const autoMineBtn = document.getElementById('autoMineBtn');
+  
+  // Toggle functions keep button UI and game state synchronized
+  // These are called by both keyboard shortcuts and button clicks
+  function toggleAutoFire(){
+    autoFire = !autoFire;
+    autoFireBtn.classList.toggle('active', autoFire);
+    autoFireBtn.innerHTML = autoFire ? '🎯<br>Fire<br>ON' : '🎯<br>Fire';
+  }
+  
+  function toggleAutoMine(){
+    autoMine = !autoMine;
+    autoMineBtn.classList.toggle('active', autoMine);
+    autoMineBtn.innerHTML = autoMine ? '⛏️<br>Mine<br>ON' : '⛏️<br>Mine';
+  }
+  
+  // Main keyboard event handler
   window.addEventListener('keydown', e=>{ 
     startMusic();
     keys[e.key.toLowerCase()]=true; 
     if(e.key===' ' || e.key==='w' || e.key==='a' || e.key==='s' || e.key==='d') e.preventDefault();
+    
+    // Toggle auto-fire with space bar (only on initial press, not repeats)
+    if(e.key === ' ' && !e.repeat){
+      e.preventDefault();
+      toggleAutoFire();
+    }
+    
+    // Toggle auto-mine with 'M' key (only on initial press, not repeats)
+    if(e.key.toLowerCase() === 'm' && !e.repeat){
+      e.preventDefault();
+      toggleAutoMine();
+    }
     
     // Toggle star map with 'N' key
     if(e.key.toLowerCase() === 'n'){
@@ -495,21 +557,15 @@
   });
   
   // Auto Fire button
-  const autoFireBtn = document.getElementById('autoFireBtn');
   autoFireBtn.addEventListener('click', () => {
     startMusic();
-    autoFire = !autoFire;
-    autoFireBtn.classList.toggle('active', autoFire);
-    autoFireBtn.innerHTML = autoFire ? '🎯<br>Fire<br>ON' : '🎯<br>Fire';
+    toggleAutoFire();
   });
   
   // Auto Mine button
-  const autoMineBtn = document.getElementById('autoMineBtn');
   autoMineBtn.addEventListener('click', () => {
     startMusic();
-    autoMine = !autoMine;
-    autoMineBtn.classList.toggle('active', autoMine);
-    autoMineBtn.innerHTML = autoMine ? '⛏️<br>Mine<br>ON' : '⛏️<br>Mine';
+    toggleAutoMine();
   });
   
   // Station window management
@@ -1142,6 +1198,15 @@
   }
   
   function updateCargoDisplay(){
+    // Recalculate cargoUsed from actual items to prevent floating point drift
+    // This ensures cargo display never shows negative values due to precision errors
+    player.cargoUsed = 0;
+    player.cargoItems.forEach(item => {
+      player.cargoUsed += item.size;
+    });
+    // Clamp to zero to prevent display of negative values
+    player.cargoUsed = Math.max(0, player.cargoUsed);
+    
     cargo.innerHTML = `<div style="margin-bottom:8px;">Credits: ${Math.round(player.credits).toLocaleString()} ISK</div>`;
     cargo.innerHTML += `<div style="margin-bottom:8px;color:#06b6d4;">Cargo: ${player.cargoUsed.toFixed(1)}/${player.cargoCap} m³</div>`;
     
@@ -2143,11 +2208,11 @@
     updateUI();
   }
 
-  // Mining action
+  // Mining action - now uses weapon-based yield system
   function doMine(){
     if(player.miningCooldown > 0) return;
     
-    // Check if we have a mining weapon fitted
+    // Mining requires a fitted mining laser weapon
     const miningWeapon = player.fittedWeapons.find(w => w.category === 'mining');
     if(!miningWeapon) return;
     
@@ -2164,7 +2229,8 @@
     const maxOre = Math.floor((player.cargoCap - player.cargoUsed) / oreSize);
     if(maxOre <= 0) return;
     
-    const amount = Math.min(target.amount, player.miningYield, maxOre);
+    // Mining yield now comes from weapon, not ship stats
+    const amount = Math.min(target.amount, miningWeapon.miningYield, maxOre);
     target.amount -= amount;
     
     // Add ore to cargo
@@ -2173,6 +2239,9 @@
     }
     player.cap -= miningWeapon.capacitorUse;
     player.miningCooldown = miningWeapon.fireRate;
+    
+    // Update cargo display in real-time so player sees ore being collected
+    updateCargoDisplay();
     
     // Create mining laser visual effect that lasts the full mining cycle
     fireEffects.push({
@@ -2405,16 +2474,6 @@
     camera.x = clamp(camera.x, 0, s.width - canvas.width);
     camera.y = clamp(camera.y, 0, s.height - canvas.height);
     
-    // Space key toggles auto-fire
-    if(keys[' ']){ 
-      if(!keys._firing){ 
-        autoFire = !autoFire;
-        keys._firing=true; 
-      } 
-    } else {
-      keys._firing=false;
-    }
-    
     // Auto-fire
     if(autoFire && selectedTarget && selectedTarget.type==='npc'){
       fire();
@@ -2423,16 +2482,6 @@
     // Auto-mine
     if(autoMine && selectedTarget && selectedTarget.type === 'asteroid'){
       doMine();
-    }
-    
-    // M key toggles auto-mine
-    if(keys['m']){ 
-      if(!keys._mining){ 
-        autoMine = !autoMine;
-        keys._mining=true; 
-      } 
-    } else {
-      keys._mining=false;
     }
     
     // Cooldowns and regen
@@ -2731,14 +2780,18 @@
     if(player.warpWarmup > 0){
       ctx.fillStyle = '#06b6d4';
       ctx.font = 'bold 14px monospace';
-      ctx.fillText(`WARP IN ${(player.warpWarmup/60).toFixed(1)}s`, canvas.width/2 - 70, canvas.height/2 - 40);
+      ctx.textAlign = 'center';
+      ctx.fillText(`WARP IN ${(player.warpWarmup/60).toFixed(1)}s`, canvas.width/2, 30);
+      ctx.textAlign = 'left';
       ctx.font = '12px monospace';
       ctx.fillStyle = '#f1f5f9';
     }
     if(player.jumpWarmup > 0){
       ctx.fillStyle = '#fbbf24';
       ctx.font = 'bold 14px monospace';
-      ctx.fillText(`JUMP IN ${(player.jumpWarmup/60).toFixed(1)}s`, canvas.width/2 - 70, canvas.height/2);
+      ctx.textAlign = 'center';
+      ctx.fillText(`JUMP IN ${(player.jumpWarmup/60).toFixed(1)}s`, canvas.width/2, 30);
+      ctx.textAlign = 'left';
       ctx.font = '12px monospace';
       ctx.fillStyle = '#f1f5f9';
     }
@@ -3228,31 +3281,330 @@
     
     // Stations
     s.stations.forEach(st=>{
-      ctx.fillStyle = '#3b82f6';
-      ctx.strokeStyle = '#60a5fa';
-      ctx.lineWidth = 3;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = '#3b82f6';
+      const baseColor = st.color || '#3b82f6';
+      const lighterColor = st.color ? st.color + 'cc' : '#60a5fa';
       
-      // Station structure
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = baseColor;
       ctx.save();
       ctx.translate(st.x, st.y);
-      ctx.rotate(Date.now() / 5000);
       
-      // Central hub
-      ctx.beginPath();
-      ctx.arc(0, 0, 25, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      
-      // Docking rings
-      for(let i = 0; i < 4; i++){
-        const angle = (i / 4) * Math.PI * 2;
-        ctx.strokeStyle = '#60a5fa';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(Math.cos(angle) * 35, Math.sin(angle) * 35, 8, 0, Math.PI * 2);
-        ctx.stroke();
+      // Draw different station types based on category
+      switch(st.category) {
+        case 'navy': // Military assembly - cross shape with turrets
+          ctx.rotate(Date.now() / 5000);
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Central core
+          ctx.fillRect(-15, -15, 30, 30);
+          ctx.strokeRect(-15, -15, 30, 30);
+          // Arms
+          for(let i = 0; i < 4; i++) {
+            ctx.save();
+            ctx.rotate((i * Math.PI / 2));
+            ctx.fillRect(-8, -45, 16, 30);
+            ctx.strokeRect(-8, -45, 16, 30);
+            // Turret
+            ctx.beginPath();
+            ctx.arc(0, -45, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          }
+          break;
+          
+        case 'academy': // Academy - hexagon with rings
+          ctx.rotate(Date.now() / 6000);
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Hexagon core
+          ctx.beginPath();
+          for(let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const x = Math.cos(angle) * 25;
+            const y = Math.sin(angle) * 25;
+            if(i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Orbital rings
+          ctx.lineWidth = 2;
+          for(let r = 35; r <= 45; r += 10) {
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          break;
+          
+        case 'treasury': // Treasury - diamond with vaults
+          ctx.rotate(Date.now() / 4500 + Math.PI / 4);
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Diamond core
+          ctx.beginPath();
+          ctx.moveTo(0, -30);
+          ctx.lineTo(30, 0);
+          ctx.lineTo(0, 30);
+          ctx.lineTo(-30, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Vault compartments
+          for(let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2;
+            ctx.fillRect(Math.cos(angle) * 20 - 5, Math.sin(angle) * 20 - 5, 10, 10);
+          }
+          break;
+          
+        case 'industrial': // Industrial - rectangular with storage
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Main structure
+          ctx.fillRect(-35, -20, 70, 40);
+          ctx.strokeRect(-35, -20, 70, 40);
+          // Storage modules
+          for(let i = 0; i < 3; i++) {
+            ctx.fillRect(-25 + i * 25, -15, 15, 30);
+            ctx.strokeRect(-25 + i * 25, -15, 15, 30);
+          }
+          // Rotating crane
+          ctx.save();
+          ctx.rotate(Date.now() / 3000);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(0, -40);
+          ctx.stroke();
+          ctx.restore();
+          break;
+          
+        case 'trading': // Trading hub - octagon with docking bays
+          ctx.rotate(Date.now() / 5000);
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Octagon
+          ctx.beginPath();
+          for(let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const x = Math.cos(angle) * 28;
+            const y = Math.sin(angle) * 28;
+            if(i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Docking ports
+          for(let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(Math.cos(angle) * 40, Math.sin(angle) * 40, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          }
+          break;
+          
+        case 'moon': // Moon base - crescent with modules
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Crescent shape
+          ctx.beginPath();
+          ctx.arc(0, 0, 25, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#000';
+          ctx.beginPath();
+          ctx.arc(10, 0, 20, 0, Math.PI * 2);
+          ctx.fill();
+          // Mining modules
+          ctx.fillStyle = baseColor;
+          for(let i = 0; i < 3; i++) {
+            const angle = Math.PI * 0.5 + (i - 1) * 0.6;
+            ctx.fillRect(Math.cos(angle) * 35 - 3, Math.sin(angle) * 35 - 8, 6, 16);
+          }
+          break;
+          
+        case 'outpost': // Simple outpost - circle with basic docking
+          ctx.rotate(Date.now() / 5000);
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Central hub
+          ctx.beginPath();
+          ctx.arc(0, 0, 25, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          // Docking rings
+          for(let i = 0; i < 4; i++){
+            const angle = (i / 4) * Math.PI * 2;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(Math.cos(angle) * 35, Math.sin(angle) * 35, 8, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          break;
+          
+        case 'military': // Military base - fortress shape
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Main fortress
+          ctx.fillRect(-30, -25, 60, 50);
+          ctx.strokeRect(-30, -25, 60, 50);
+          // Battlements
+          for(let i = 0; i < 5; i++) {
+            ctx.fillRect(-25 + i * 12, -35, 8, 10);
+          }
+          // Shield emitters
+          ctx.save();
+          ctx.rotate(Date.now() / 2000);
+          for(let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(Math.cos(angle) * 40, Math.sin(angle) * 40, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+          break;
+          
+        case 'sovereignty': // Sovereignty - star fortress
+          ctx.rotate(Date.now() / 6000);
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Star shape
+          ctx.beginPath();
+          for(let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const radius = i % 2 === 0 ? 35 : 15;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            if(i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Central core
+          ctx.beginPath();
+          ctx.arc(0, 0, 12, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+          
+        case 'citadel': // Keepstar citadel - massive structure
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 4;
+          // Central sphere
+          ctx.beginPath();
+          ctx.arc(0, 0, 30, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          // Three massive spires
+          ctx.save();
+          ctx.rotate(Date.now() / 8000);
+          for(let i = 0; i < 3; i++) {
+            ctx.save();
+            ctx.rotate((i / 3) * Math.PI * 2);
+            ctx.fillRect(-6, -60, 12, 35);
+            ctx.strokeRect(-6, -60, 12, 35);
+            // Spire tip
+            ctx.beginPath();
+            ctx.moveTo(-10, -60);
+            ctx.lineTo(0, -75);
+            ctx.lineTo(10, -60);
+            ctx.fill();
+            ctx.restore();
+          }
+          ctx.restore();
+          break;
+          
+        case 'mining': // Mining colony - drill structure
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Platform
+          ctx.fillRect(-35, -10, 70, 20);
+          ctx.strokeRect(-35, -10, 70, 20);
+          // Drills
+          for(let i = 0; i < 4; i++) {
+            const x = -25 + i * 17;
+            ctx.fillRect(x - 4, 10, 8, 25);
+            ctx.strokeRect(x - 4, 10, 8, 25);
+            // Drill bit
+            ctx.beginPath();
+            ctx.moveTo(x - 5, 35);
+            ctx.lineTo(x, 42);
+            ctx.lineTo(x + 5, 35);
+            ctx.fill();
+          }
+          // Ore processor (rotating)
+          ctx.save();
+          ctx.rotate(Date.now() / 1500);
+          ctx.beginPath();
+          ctx.arc(0, -5, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          break;
+          
+        case 'logistics': // Logistics hub - modular design
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Central module
+          ctx.fillRect(-20, -20, 40, 40);
+          ctx.strokeRect(-20, -20, 40, 40);
+          // Cargo modules
+          for(let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+            const x = Math.cos(angle) * 35;
+            const y = Math.sin(angle) * 35;
+            ctx.fillRect(x - 10, y - 10, 20, 20);
+            ctx.strokeRect(x - 10, y - 10, 20, 20);
+          }
+          break;
+          
+        case 'staging': // Staging point - arrow/launch platform
+          ctx.rotate(Date.now() / 4000);
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          // Arrow shape pointing up
+          ctx.beginPath();
+          ctx.moveTo(0, -35);
+          ctx.lineTo(20, -10);
+          ctx.lineTo(10, -10);
+          ctx.lineTo(10, 25);
+          ctx.lineTo(-10, 25);
+          ctx.lineTo(-10, -10);
+          ctx.lineTo(-20, -10);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Launch bays
+          for(let i = 0; i < 3; i++) {
+            ctx.fillRect(-6, -5 + i * 12, 12, 8);
+          }
+          break;
+          
+        default: // Fallback to outpost design
+          ctx.rotate(Date.now() / 5000);
+          ctx.fillStyle = baseColor;
+          ctx.strokeStyle = lighterColor;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, 25, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          break;
       }
       
       ctx.restore();
@@ -3278,41 +3630,107 @@
     
     // Stargates
     s.stargates.forEach(g=>{
-      // Animated rings effect
       const time = Date.now() / 1000;
+      const gateColor = g.color || '#22d3ee';
+      // Parse hex color to RGB for alpha blending
+      const r = parseInt(gateColor.slice(1,3), 16);
+      const gR = parseInt(gateColor.slice(3,5), 16);
+      const b = parseInt(gateColor.slice(5,7), 16);
+      
+      ctx.save();
+      ctx.translate(g.x, g.y);
+      
+      // Outer rotating ring structure
+      ctx.save();
+      ctx.rotate(time * 0.3);
+      ctx.strokeStyle = gateColor;
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = gateColor;
+      
+      // Draw ring segments (looks like a gate frame)
+      for(let i = 0; i < 8; i++){
+        const angle = (i / 8) * Math.PI * 2;
+        const startAngle = angle - 0.15;
+        const endAngle = angle + 0.15;
+        ctx.beginPath();
+        ctx.arc(0, 0, g.radius + 12, startAngle, endAngle);
+        ctx.stroke();
+      }
+      ctx.restore();
+      
+      // Animated pulsing rings
       for(let i = 0; i < 3; i++){
         const offset = (time * 0.5 + i * 0.33) % 1;
-        ctx.strokeStyle = `rgba(34, 211, 238, ${1 - offset})`;
+        ctx.strokeStyle = `rgba(${r}, ${gR}, ${b}, ${(1 - offset) * 0.7})`;
         ctx.lineWidth = 2;
         ctx.shadowBlur = 15;
-        ctx.shadowColor = '#22d3ee';
+        ctx.shadowColor = gateColor;
         ctx.beginPath();
-        ctx.arc(g.x, g.y, g.radius + offset * 20, 0, Math.PI*2);
+        ctx.arc(0, 0, g.radius + offset * 20, 0, Math.PI*2);
         ctx.stroke();
       }
       ctx.shadowBlur = 0;
       
-      // Main gate structure
-      ctx.strokeStyle = '#22d3ee';
-      ctx.fillStyle = '#0e7490';
+      // Main gate ring
+      ctx.strokeStyle = gateColor;
+      ctx.fillStyle = `rgba(${r}, ${gR}, ${b}, 0.4)`;
       ctx.lineWidth = 3;
       ctx.shadowBlur = 10;
-      ctx.shadowColor = '#22d3ee';
+      ctx.shadowColor = gateColor;
       ctx.beginPath();
-      ctx.arc(g.x, g.y, g.radius, 0, Math.PI*2);
+      ctx.arc(0, 0, g.radius, 0, Math.PI*2);
       ctx.fill();
       ctx.stroke();
+      
+      // Energy arcs connecting points on the ring
+      ctx.save();
+      ctx.rotate(time * 0.5);
+      ctx.strokeStyle = `rgba(${r}, ${gR}, ${b}, 0.6)`;
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 8;
+      for(let i = 0; i < 4; i++){
+        const angle1 = (i / 4) * Math.PI * 2;
+        const angle2 = ((i + 2) / 4) * Math.PI * 2;
+        const x1 = Math.cos(angle1) * (g.radius - 8);
+        const y1 = Math.sin(angle1) * (g.radius - 8);
+        const x2 = Math.cos(angle2) * (g.radius - 8);
+        const y2 = Math.sin(angle2) * (g.radius - 8);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+      ctx.restore();
       ctx.shadowBlur = 0;
       
-      // Inner portal effect
-      const gradient = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.radius - 5);
-      gradient.addColorStop(0, 'rgba(34, 211, 238, 0.6)');
-      gradient.addColorStop(0.5, 'rgba(14, 116, 144, 0.4)');
-      gradient.addColorStop(1, 'rgba(6, 182, 212, 0.1)');
+      // Inner portal effect with swirling gradient
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, g.radius - 5);
+      gradient.addColorStop(0, `rgba(${r}, ${gR}, ${b}, 0.8)`);
+      gradient.addColorStop(0.3, `rgba(${r}, ${gR}, ${b}, 0.5)`);
+      gradient.addColorStop(0.7, `rgba(${r}, ${gR}, ${b}, 0.3)`);
+      gradient.addColorStop(1, `rgba(${r}, ${gR}, ${b}, 0.05)`);
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(g.x, g.y, g.radius - 5, 0, Math.PI*2);
+      ctx.arc(0, 0, g.radius - 5, 0, Math.PI*2);
       ctx.fill();
+      
+      // Swirling particles in portal
+      ctx.save();
+      ctx.rotate(-time * 0.8);
+      for(let i = 0; i < 6; i++){
+        const angle = (i / 6) * Math.PI * 2 + time;
+        const dist = (g.radius - 10) * (0.3 + Math.sin(time * 2 + i) * 0.2);
+        const x = Math.cos(angle) * dist;
+        const y = Math.sin(angle) * dist;
+        ctx.fillStyle = `rgba(${r}, ${gR}, ${b}, ${0.6 + Math.sin(time * 3 + i) * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      
+      ctx.restore();
       
       ctx.fillStyle = '#22d3ee';
       ctx.font = '12px monospace';
@@ -3336,11 +3754,42 @@
     // Asteroids
     s.asteroids.forEach(a=>{
       const pct = a.amount / a.maxAmount;
+      
+      // Draw irregular asteroid shape
+      ctx.save();
+      ctx.translate(a.x, a.y);
+      ctx.rotate(a.rotation);
+      
+      // Main asteroid body
       ctx.fillStyle = `rgb(${100+pct*55}, ${80+pct*40}, 30)`;
       ctx.beginPath();
-      ctx.arc(a.x, a.y, a.radius, 0, Math.PI*2);
+      a.shapePoints.forEach((p, i) => {
+        const x = Math.cos(p.angle) * p.dist;
+        const y = Math.sin(p.angle) * p.dist;
+        if(i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
       ctx.fill();
       
+      // Add darker edge for depth
+      ctx.strokeStyle = `rgba(${60+pct*30}, ${50+pct*20}, 20, 0.6)`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      
+      // Draw craters for surface detail
+      ctx.fillStyle = `rgba(${70+pct*30}, ${60+pct*20}, 25, 0.5)`;
+      a.craters.forEach(c => {
+        const cx = Math.cos(c.angle) * c.dist;
+        const cy = Math.sin(c.angle) * c.dist;
+        ctx.beginPath();
+        ctx.arc(cx, cy, c.size, 0, Math.PI*2);
+        ctx.fill();
+      });
+      
+      ctx.restore();
+      
+      // Selection ring
       if(selectedTarget && selectedTarget.ref === a){
         ctx.strokeStyle = '#fbbf24';
         ctx.lineWidth = 2;
@@ -4088,7 +4537,28 @@
     }
     
     // Draw ship based on class
-    const shipColor = player.isWarping ? '#22d3ee' : '#06b6d4';
+    // Determine ship color based on faction
+    let shipColor;
+    if(player.isWarping) {
+      shipColor = '#22d3ee'; // Cyan when warping
+    } else {
+      switch(player.shipFaction) {
+        case 'Caldari':
+          shipColor = '#6366f1'; // Indigo blue
+          break;
+        case 'Amarr':
+          shipColor = '#f59e0b'; // Gold/amber
+          break;
+        case 'Gallente':
+          shipColor = '#10b981'; // Emerald green
+          break;
+        case 'Minmatar':
+          shipColor = '#f97316'; // Rust orange
+          break;
+        default:
+          shipColor = '#06b6d4'; // Default cyan for non-faction
+      }
+    }
     drawShipByClass(ctx, player.shipClass, shipColor, 1);
     
     const spd = Math.hypot(player.vx, player.vy);

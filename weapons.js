@@ -162,7 +162,7 @@ const WEAPON_MODULES = {
     description: 'Basic mining laser',
     
     damage: 0,
-    fireRate: 30,
+    fireRate: 300,
     maxRange: 200, // Short range for mining
     optimalRange: 200,
     capacitorUse: 3,
@@ -184,7 +184,7 @@ const WEAPON_MODULES = {
     description: 'Improved mining laser with better yield',
     
     damage: 0,
-    fireRate: 28,
+    fireRate: 400,
     maxRange: 350,
     optimalRange: 350,
     capacitorUse: 4,
