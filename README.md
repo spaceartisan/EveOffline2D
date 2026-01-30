@@ -21,6 +21,8 @@ A vanilla JavaScript homage to EVE Online featuring true EVE-like mechanics:
 - Multiple ore types with varying rarity and value
 - Station trading and storage
 - Metal scrap salvaging from destroyed ships
+- **Customizable station inventories** - Each station sells different items and ships
+- **Resource respawn** - Asteroids respawn after 5 minutes, pirates after 1 minute
 
 **Multiple Systems (20 Total)**
 - High-sec (1.0-0.5) - Safe zones with low rewards
@@ -44,9 +46,10 @@ A vanilla JavaScript homage to EVE Online featuring true EVE-like mechanics:
 - Shield regeneration
 - Capacitor regeneration
 - Ship fitting with powergrid/CPU constraints
-- Multiple ship classes (Frigates, Battlecruisers, Battleships)
+- Multiple ship classes (Corvettes, Frigates, Battlecruisers, Battleships)
 - Real-time cargo space tracking
 - Warp drive and jump gate travel
+- Ship repair service at stations (100 ISK per damage point)
 
 ## Controls
 
@@ -73,11 +76,11 @@ A vanilla JavaScript homage to EVE Online featuring true EVE-like mechanics:
 
 1. Open [index.html](index.html) in a browser
 2. Start with the Velator (starter frigate) in your chosen system
-3. **Mining:** Select asteroids (A key) and toggle auto-mine (M key) to gather ore
-4. **Combat:** Select pirates (red ships) and toggle auto-fire (Space) to engage
+3. **Mining:** Click to select asteroids and toggle auto-mine (M key) to gather ore
+4. **Combat:** Click to select pirates (red ships) and toggle auto-fire (Space) to engage
 5. **Trading:** Dock at stations to sell ore, buy/sell items, and upgrade your ship
 6. **Travel:** Use the star map (N key) to view systems, then use jump gates or warp drives
-7. **Progression:** Earn ISK to buy better ships (Atron, Tristan, Rifter, Ferox, Apocalypse)
+7. **Progression:** Earn ISK to buy better ships (Ibis corvette free everywhere, then Atron, Tristan, Rifter, Ferox, Apocalypse)
 8. **Risk/Reward:** Low-sec and null-sec systems have more pirates but better rewards
 
 **Tips:**
@@ -86,6 +89,9 @@ A vanilla JavaScript homage to EVE Online featuring true EVE-like mechanics:
 - Watch your cargo space - different ores have different volumes
 - Mining yield depends on your equipped mining laser (Miner I = 1, Miner II = 4)
 - Auto-mine and auto-fire toggle independently for mixed gameplay
+- Each station has unique inventory - major hubs like Jita have full selection
+- Free Ibis corvette available at all stations as emergency backup ship
+- Resources respawn: asteroids in 5 minutes, pirates in 1 minute
 
 ## Technical Details
 
@@ -98,8 +104,7 @@ Pure vanilla JavaScript with Canvas 2D rendering. No frameworks, no dependencies
 - [modules.js](modules.js) - Ship modules (shields, armor, capacitor)
 - [items.js](items.js) - Ore types, metal scraps, market data
 - [systems.js](systems.js) - 20 star systems with connections and stations
-- [index.html](index.html) - Game container and UI elements
-- [style.css](style.css) - UI styling
+- [index.html](index.html) - Game container and UI elements (CSS inline)
 
 **For Modders:**
 See [CUSTOMIZATION_GUIDE.md](CUSTOMIZATION_GUIDE.md) for detailed instructions on adding ships, weapons, systems, and tweaking game balance.

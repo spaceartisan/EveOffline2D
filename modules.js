@@ -8,6 +8,7 @@ const SUBSYSTEM_MODULES = {
   'Small Shield Booster I': {
     type: 'active',
     category: 'shield',
+    slotType: 'medium',
     size: 'small',
     name: 'Small Shield Booster I',
     description: 'Repairs shield when activated',
@@ -27,6 +28,7 @@ const SUBSYSTEM_MODULES = {
   'Small Shield Extender I': {
     type: 'passive',
     category: 'shield',
+    slotType: 'medium',
     size: 'small',
     name: 'Small Shield Extender I',
     description: 'Increases maximum shield capacity',
@@ -42,6 +44,7 @@ const SUBSYSTEM_MODULES = {
   'Shield Recharger I': {
     type: 'passive',
     category: 'shield',
+    slotType: 'medium',
     size: 'small',
     name: 'Shield Recharger I',
     description: 'Increases shield regeneration rate',
@@ -59,6 +62,7 @@ const SUBSYSTEM_MODULES = {
   'Small Armor Repairer I': {
     type: 'active',
     category: 'armor',
+    slotType: 'medium',
     size: 'small',
     name: 'Small Armor Repairer I',
     description: 'Repairs armor when activated',
@@ -76,6 +80,7 @@ const SUBSYSTEM_MODULES = {
   '200mm Armor Plate I': {
     type: 'passive',
     category: 'armor',
+    slotType: 'low',
     size: 'small',
     name: '200mm Armor Plate I',
     description: 'Increases armor hit points but reduces speed',
@@ -94,6 +99,7 @@ const SUBSYSTEM_MODULES = {
   '1MN Afterburner I': {
     type: 'active',
     category: 'propulsion',
+    slotType: 'medium',
     size: 'small',
     name: '1MN Afterburner I',
     description: 'Increases speed while active',
@@ -111,6 +117,7 @@ const SUBSYSTEM_MODULES = {
   'Overdrive Injector I': {
     type: 'passive',
     category: 'propulsion',
+    slotType: 'low',
     size: 'small',
     name: 'Overdrive Injector I',
     description: 'Permanently increases maximum speed',
@@ -128,6 +135,7 @@ const SUBSYSTEM_MODULES = {
   'Capacitor Recharger I': {
     type: 'passive',
     category: 'capacitor',
+    slotType: 'medium',
     size: 'small',
     name: 'Capacitor Recharger I',
     description: 'Increases capacitor recharge rate',
@@ -143,6 +151,7 @@ const SUBSYSTEM_MODULES = {
   'Capacitor Battery I': {
     type: 'passive',
     category: 'capacitor',
+    slotType: 'medium',
     size: 'small',
     name: 'Capacitor Battery I',
     description: 'Increases maximum capacitor capacity',
@@ -160,6 +169,7 @@ const SUBSYSTEM_MODULES = {
   'Magnetic Field Stabilizer I': {
     type: 'passive',
     category: 'damage',
+    slotType: 'low',
     size: 'small',
     name: 'Magnetic Field Stabilizer I',
     description: 'Increases hybrid turret damage',
@@ -175,6 +185,7 @@ const SUBSYSTEM_MODULES = {
   'Heat Sink I': {
     type: 'passive',
     category: 'damage',
+    slotType: 'low',
     size: 'small',
     name: 'Heat Sink I',
     description: 'Increases laser damage',
@@ -190,6 +201,7 @@ const SUBSYSTEM_MODULES = {
   'Gyrostabilizer I': {
     type: 'passive',
     category: 'damage',
+    slotType: 'low',
     size: 'small',
     name: 'Gyrostabilizer I',
     description: 'Increases projectile weapon damage',
@@ -205,6 +217,7 @@ const SUBSYSTEM_MODULES = {
   'Ballistic Control System I': {
     type: 'passive',
     category: 'damage',
+    slotType: 'low',
     size: 'small',
     name: 'Ballistic Control System I',
     description: 'Increases missile damage',
@@ -222,6 +235,7 @@ const SUBSYSTEM_MODULES = {
   'Cargo Expander I': {
     type: 'passive',
     category: 'utility',
+    slotType: 'low',
     size: 'small',
     name: 'Cargo Expander I',
     description: 'Increases cargo capacity',
@@ -237,6 +251,7 @@ const SUBSYSTEM_MODULES = {
   'Warp Core Stabilizer I': {
     type: 'passive',
     category: 'utility',
+    slotType: 'low',
     size: 'small',
     name: 'Warp Core Stabilizer I',
     description: 'Reduces warp cooldown time',

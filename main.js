@@ -76,13 +76,23 @@
       // Economy (persistent across ship changes)
       this.credits = 500000000; // Starting credits
       
-      // Fitting system
-      this.fittedModules = []; // Array of fitted module objects
-      this.fittedWeapons = []; // Array of fitted weapon objects
+      // Fitting system - slot-based
+      this.highSlots = []; // Array of fitted items in high slots
+      this.mediumSlots = []; // Array of fitted items in medium slots
+      this.lowSlots = []; // Array of fitted items in low slots
+      this.highSlotsMax = stats.highSlotsMax;
+      this.mediumSlotsMax = stats.mediumSlotsMax;
+      this.lowSlotsMax = stats.lowSlotsMax;
       this.powergridUsed = 0;
       this.cpuUsed = 0;
       this.powergridTotal = 50; // Default fitting resources
       this.cpuTotal = 100;
+      
+      // Active module states (for medium and low slots)
+      this.activeModuleStates = {
+        medium: [],
+        low: []
+      };
       
       // Commands
       this.targetCommand=null;
@@ -185,6 +195,8 @@
       this.nebulas=[]; // Background nebulas
       this.mapX = 0; // Star map X position
       this.mapY = 0; // Star map Y position
+      this.forSale = []; // Items for sale at station
+      this.shipsForSale = []; // Ships for sale at station
     }
   }
 
@@ -297,6 +309,8 @@
     sys.gates = data.gates;
     sys.mapX = data.mapX || 380; // Use static position from data, or default to center
     sys.mapY = data.mapY || 250;
+    sys.forSale = data.forSale || []; // Copy forSale list
+    sys.shipsForSale = data.shipsForSale || []; // Copy shipsForSale list
     systems.push(sys);
   });
   
@@ -396,8 +410,16 @@
   let current = 0;
   const player = new Ship('Velator'); // Start with basic frigate
   const playerHangar = ['Velator']; // Track owned ships
-  const playerModules = []; // Track owned modules
-  const playerWeapons = []; // Track owned weapons
+  
+  // Give player a starting Miner I in cargo
+  const minerModule = getWeaponModule('Miner I');
+  addToInventory(player.cargoItems, {
+    ...minerModule,
+    type: 'weapon',
+    name: 'Miner I',
+    size: 0.1
+  });
+  
   let selectedTarget = null;
   let autoFire = false;
   let autoMine = false;
@@ -1254,7 +1276,46 @@
         itemDiv.style.padding = '3px';
         itemDiv.style.background = '#1e293b';
         itemDiv.style.borderRadius = '2px';
-        itemDiv.innerHTML = `<div style="color:#f1f5f9;">${group.name} x${group.indices.length}</div><div style="color:#64748b;font-size:10px;">${(group.size * group.indices.length).toFixed(1)} m³</div>`;
+        
+        // Get item details for weapons/modules
+        let detailsHtml = '';
+        if(group.type === 'weapon' || group.type === 'module'){
+          const index = player.cargoItems.findIndex(item => 
+            item.type === group.type && item.name === group.name
+          );
+          if(index !== -1){
+            const item = player.cargoItems[index];
+            
+            // Description
+            if(item.description){
+              detailsHtml += `<div style="color:#94a3b8;font-size:9px;margin-top:2px;">${item.description}</div>`;
+            }
+            
+            // Slot type
+            const slotTypeLabel = item.slotType === 'high' ? 'HIGH SLOT' : (item.slotType === 'medium' ? 'MEDIUM SLOT' : 'LOW SLOT');
+            const slotColor = item.slotType === 'high' ? '#ef4444' : (item.slotType === 'medium' ? '#3b82f6' : '#f59e0b');
+            detailsHtml += `<div style="color:${slotColor};font-size:9px;font-weight:bold;margin-top:2px;">${slotTypeLabel}</div>`;
+            
+            if(group.type === 'weapon'){
+              detailsHtml += `<div style="color:#94a3b8;font-size:10px;">DMG: ${item.damage || 0} | Range: ${item.maxRange || 0}m | ROF: ${item.fireRate ? (60/item.fireRate).toFixed(1) : 0}/s</div>`;
+              detailsHtml += `<div style="color:#64748b;font-size:10px;">PG: ${item.powergridUsage || 0} | CPU: ${item.cpuUsage || 0} | Cap: ${item.capacitorUse || 0}</div>`;
+            } else if(group.type === 'module'){
+              let effectText = '';
+              if(item.shieldBonus) effectText += `+${item.shieldBonus} Shield `;
+              if(item.armorBonus) effectText += `+${item.armorBonus} Armor `;
+              if(item.shieldRegenBonus) effectText += `+${(item.shieldRegenBonus*100).toFixed(0)}% Shield Regen `;
+              if(item.damageBonus) effectText += `+${(item.damageBonus*100).toFixed(0)}% Damage `;
+              if(item.speedBonus && item.type === 'passive') effectText += `+${(item.speedBonus*100).toFixed(0)}% Speed `;
+              if(item.cargoBonus) effectText += `+${item.cargoBonus} Cargo `;
+              if(item.capacitorBonus) effectText += `+${item.capacitorBonus} Cap `;
+              if(item.capacitorRegenBonus) effectText += `+${(item.capacitorRegenBonus*100).toFixed(0)}% Cap Regen `;
+              detailsHtml += `<div style="color:#94a3b8;font-size:10px;">${effectText}</div>`;
+              detailsHtml += `<div style="color:#64748b;font-size:10px;">PG: ${item.powergridUsage || 0} | CPU: ${item.cpuUsage || 0}</div>`;
+            }
+          }
+        }
+        
+        itemDiv.innerHTML = `<div style="color:#f1f5f9;font-weight:bold;">${group.name} x${group.indices.length}</div>${detailsHtml}<div style="color:#64748b;font-size:10px;margin-top:2px;">${(group.size * group.indices.length).toFixed(1)} m³</div>`;
         
         // Add transfer controls if docked
         const nearStation = systems[current].stations.find(st => dist(player, st) < 300);
@@ -1421,7 +1482,7 @@
       if(nearStation.inventory.length === 0){
         stationInventoryEl.innerHTML = '<div style="color:#64748b;font-size:11px">Empty station storage</div>';
       } else {
-        // Group items
+        // Group items from station inventory only
         const itemGroups = {};
         nearStation.inventory.forEach((item, idx) => {
           const key = `${item.type}_${item.name}`;
@@ -1438,7 +1499,46 @@
           itemDiv.style.padding = '3px';
           itemDiv.style.background = '#1e293b';
           itemDiv.style.borderRadius = '2px';
-          itemDiv.innerHTML = `<div style="color:#f1f5f9;">${group.name} x${group.indices.length}</div><div style="color:#64748b;font-size:10px;">${(group.size * group.indices.length).toFixed(1)} m³</div>`;
+          
+          // Get item details for weapons/modules
+          let detailsHtml = '';
+          if(group.type === 'weapon' || group.type === 'module'){
+            const index = nearStation.inventory.findIndex(item => 
+              item.type === group.type && item.name === group.name
+            );
+            if(index !== -1){
+              const item = nearStation.inventory[index];
+              
+              // Description
+              if(item.description){
+                detailsHtml += `<div style="color:#94a3b8;font-size:9px;margin-top:2px;">${item.description}</div>`;
+              }
+              
+              // Slot type
+              const slotTypeLabel = item.slotType === 'high' ? 'HIGH SLOT' : (item.slotType === 'medium' ? 'MEDIUM SLOT' : 'LOW SLOT');
+              const slotColor = item.slotType === 'high' ? '#ef4444' : (item.slotType === 'medium' ? '#3b82f6' : '#f59e0b');
+              detailsHtml += `<div style="color:${slotColor};font-size:9px;font-weight:bold;margin-top:2px;">${slotTypeLabel}</div>`;
+              
+              if(group.type === 'weapon'){
+                detailsHtml += `<div style="color:#94a3b8;font-size:10px;">DMG: ${item.damage || 0} | Range: ${item.maxRange || 0}m | ROF: ${item.fireRate ? (60/item.fireRate).toFixed(1) : 0}/s</div>`;
+                detailsHtml += `<div style="color:#64748b;font-size:10px;">PG: ${item.powergridUsage || 0} | CPU: ${item.cpuUsage || 0} | Cap: ${item.capacitorUse || 0}</div>`;
+              } else if(group.type === 'module'){
+                let effectText = '';
+                if(item.shieldBonus) effectText += `+${item.shieldBonus} Shield `;
+                if(item.armorBonus) effectText += `+${item.armorBonus} Armor `;
+                if(item.shieldRegenBonus) effectText += `+${(item.shieldRegenBonus*100).toFixed(0)}% Shield Regen `;
+                if(item.damageBonus) effectText += `+${(item.damageBonus*100).toFixed(0)}% Damage `;
+                if(item.speedBonus && item.type === 'passive') effectText += `+${(item.speedBonus*100).toFixed(0)}% Speed `;
+                if(item.cargoBonus) effectText += `+${item.cargoBonus} Cargo `;
+                if(item.capacitorBonus) effectText += `+${item.capacitorBonus} Cap `;
+                if(item.capacitorRegenBonus) effectText += `+${(item.capacitorRegenBonus*100).toFixed(0)}% Cap Regen `;
+                detailsHtml += `<div style="color:#94a3b8;font-size:10px;">${effectText}</div>`;
+                detailsHtml += `<div style="color:#64748b;font-size:10px;">PG: ${item.powergridUsage || 0} | CPU: ${item.cpuUsage || 0}</div>`;
+              }
+            }
+          }
+          
+          itemDiv.innerHTML = `<div style="color:#f1f5f9;font-weight:bold;">${group.name} x${group.indices.length}</div>${detailsHtml}<div style="color:#64748b;font-size:10px;margin-top:2px;">${(group.size * group.indices.length).toFixed(1)} m³</div>`;
           
           // Quantity controls
           const controlsDiv = document.createElement('div');
@@ -1557,6 +1657,90 @@
             controlsDiv.appendChild(qtyInput);
             controlsDiv.appendChild(loadBtn);
             controlsDiv.appendChild(sellBtn);
+          } else if(group.type === 'weapon' || group.type === 'module'){
+            // Fit button for weapons and modules
+            const fitBtn = document.createElement('button');
+            fitBtn.textContent = 'Fit';
+            fitBtn.style.fontSize = '9px';
+            fitBtn.style.padding = '2px 6px';
+            fitBtn.style.background = '#0284c7';
+            
+            // Check if can fit
+            const index = nearStation.inventory.findIndex(item => 
+              item.type === group.type && item.name === group.name
+            );
+            if(index !== -1){
+              const item = nearStation.inventory[index];
+              
+              // Check fitting requirements
+              const hasSlots = group.type === 'weapon' 
+                ? player.highSlots.filter(w => w).length < player.highSlotsMax
+                : (item.slotType === 'medium' 
+                  ? player.mediumSlots.filter(m => m).length < player.mediumSlotsMax
+                  : player.lowSlots.filter(m => m).length < player.lowSlotsMax);
+              const canFit = player.powergridUsed + (item.powergridUsage || 0) <= player.powergridTotal &&
+                            player.cpuUsed + (item.cpuUsage || 0) <= player.cpuTotal &&
+                            hasSlots;
+              
+              if(!canFit){
+                fitBtn.disabled = true;
+                fitBtn.style.background = '#64748b';
+                fitBtn.title = 'Insufficient PG/CPU or no free slots';
+              }
+            }
+            
+            fitBtn.onclick = (e) => {
+              e.stopPropagation();
+              // Find the item in station inventory
+              const itemIndex = nearStation.inventory.findIndex(item => 
+                item.type === group.type && item.name === group.name
+              );
+              if(itemIndex !== -1){
+                const item = nearStation.inventory[itemIndex];
+                // Remove from station before fitting
+                removeFromInventory(nearStation.inventory, itemIndex);
+                // Fit directly
+                if(fitItem(item.name)){
+                  updateUI();
+                } else {
+                  // If fit failed, return to station
+                  addToInventory(nearStation.inventory, item);
+                  updateUI();
+                }
+              }
+            };
+            
+            // Sell button for weapons and modules
+            const sellBtn = document.createElement('button');
+            sellBtn.textContent = 'Sell';
+            sellBtn.style.fontSize = '9px';
+            sellBtn.style.padding = '2px 6px';
+            sellBtn.style.background = '#16a34a';
+            sellBtn.onclick = (e) => {
+              e.stopPropagation();
+              const qty = Math.min(parseInt(qtyInput.value) || 1, group.indices.length);
+              let totalValue = 0;
+              for(let i = 0; i < qty; i++){
+                // Find next matching item dynamically
+                const itemIndex = nearStation.inventory.findIndex(item => 
+                  item.type === group.type && item.name === group.name
+                );
+                if(itemIndex === -1) break;
+                
+                const item = nearStation.inventory[itemIndex];
+                // Sell at 50% of purchase price
+                const sellPrice = Math.round((item.price || 0) * 0.50);
+                totalValue += sellPrice;
+                removeFromInventory(nearStation.inventory, itemIndex);
+              }
+              player.credits += totalValue;
+              updateUI();
+            };
+            
+            controlsDiv.appendChild(qtyInput);
+            controlsDiv.appendChild(fitBtn);
+            controlsDiv.appendChild(loadBtn);
+            controlsDiv.appendChild(sellBtn);
           } else {
             controlsDiv.appendChild(qtyInput);
             controlsDiv.appendChild(loadBtn);
@@ -1573,6 +1757,76 @@
     if(!nearStation){
       marketEl.innerHTML = '<div style="color:#64748b;font-size:11px">Dock at station to access market</div>';
     } else {
+      // Repair Service Section
+      const shieldDamage = player.maxShield - player.shield;
+      const armorDamage = player.maxArmor - player.armor;
+      const hullDamage = player.maxHull - player.hull;
+      const totalDamage = shieldDamage + armorDamage + hullDamage;
+      
+      if(totalDamage > 0){
+        // Calculate repair cost: 100 ISK per point of damage
+        const repairCost = Math.round(totalDamage * 100);
+        
+        const repairDiv = document.createElement('div');
+        repairDiv.style.marginBottom = '12px';
+        repairDiv.style.padding = '8px';
+        repairDiv.style.background = '#1e3a4e';
+        repairDiv.style.borderRadius = '4px';
+        repairDiv.style.border = '1px solid #0284c7';
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.style.color = '#06b6d4';
+        titleDiv.style.fontSize = '12px';
+        titleDiv.style.fontWeight = 'bold';
+        titleDiv.style.marginBottom = '6px';
+        titleDiv.textContent = '⚙️ Repair Service';
+        repairDiv.appendChild(titleDiv);
+        
+        const damageDiv = document.createElement('div');
+        damageDiv.style.color = '#94a3b8';
+        damageDiv.style.fontSize = '10px';
+        damageDiv.style.marginBottom = '6px';
+        const damageText = [];
+        if(shieldDamage > 0) damageText.push(`Shield: ${shieldDamage.toFixed(0)}`);
+        if(armorDamage > 0) damageText.push(`Armor: ${armorDamage.toFixed(0)}`);
+        if(hullDamage > 0) damageText.push(`Hull: ${hullDamage.toFixed(0)}`);
+        damageDiv.textContent = `Damage: ${damageText.join(' | ')}`;
+        repairDiv.appendChild(damageDiv);
+        
+        const repairBtn = document.createElement('button');
+        repairBtn.textContent = `Repair All (${repairCost.toLocaleString()} ISK)`;
+        repairBtn.style.fontSize = '11px';
+        repairBtn.style.padding = '6px 12px';
+        repairBtn.style.width = '100%';
+        repairBtn.style.background = player.credits >= repairCost ? '#10b981' : '#64748b';
+        repairBtn.style.fontWeight = 'bold';
+        repairBtn.disabled = player.credits < repairCost;
+        repairBtn.onclick = (e) => {
+          e.stopPropagation();
+          if(player.credits >= repairCost){
+            player.credits -= repairCost;
+            player.shield = player.maxShield;
+            player.armor = player.maxArmor;
+            player.hull = player.maxHull;
+            updateUI();
+          }
+        };
+        repairDiv.appendChild(repairBtn);
+        
+        marketEl.appendChild(repairDiv);
+      } else {
+        // Ship is fully repaired
+        const statusDiv = document.createElement('div');
+        statusDiv.style.marginBottom = '12px';
+        statusDiv.style.padding = '6px';
+        statusDiv.style.background = '#1e3a4e';
+        statusDiv.style.borderRadius = '4px';
+        statusDiv.style.color = '#10b981';
+        statusDiv.style.fontSize = '11px';
+        statusDiv.style.textAlign = 'center';
+        statusDiv.textContent = '✓ Ship Fully Repaired';
+        marketEl.appendChild(statusDiv);
+      }
       
       // Show ore prices and buy/sell for each type
       Object.keys(ORE_TYPES).forEach(oreType => {
@@ -1611,21 +1865,22 @@
       });
     }
 
-    // Fitted Modules
+    // Fitted Modules - slot-based display
     fittingEl.innerHTML = '';
     fittingEl.innerHTML = `<div style="color:#06b6d4;font-size:11px;margin-bottom:8px">Powergrid: ${player.powergridUsed.toFixed(1)}/${player.powergridTotal} | CPU: ${player.cpuUsed.toFixed(1)}/${player.cpuTotal}</div>`;
     
-    // Show fitted weapons
-    if(player.fittedWeapons.length > 0){
-      const weaponsHeader = document.createElement('div');
-      weaponsHeader.style.fontSize = '11px';
-      weaponsHeader.style.fontWeight = 'bold';
-      weaponsHeader.style.color = '#f59e0b';
-      weaponsHeader.style.marginBottom = '4px';
-      weaponsHeader.textContent = 'Weapons';
-      fittingEl.appendChild(weaponsHeader);
-      
-      player.fittedWeapons.forEach((weapon, index) => {
+    // Show high slots (weapons)
+    const highHeader = document.createElement('div');
+    highHeader.style.fontSize = '11px';
+    highHeader.style.fontWeight = 'bold';
+    highHeader.style.color = '#f59e0b';
+    highHeader.style.marginBottom = '4px';
+    highHeader.textContent = `High Slots (${player.highSlots.filter(w => w).length}/${player.highSlotsMax})`;
+    fittingEl.appendChild(highHeader);
+    
+    if(player.highSlots.some(w => w)){
+      player.highSlots.forEach((weapon, index) => {
+        if(!weapon) return;
         const weaponDiv = document.createElement('div');
         weaponDiv.style.fontSize = '11px';
         weaponDiv.style.marginBottom = '6px';
@@ -1639,28 +1894,45 @@
           <div style="color:#64748b;font-size:10px;">PG: ${weapon.powergridUsage} | CPU: ${weapon.cpuUsage}</div>
         `;
         
+        // Add Unfit button
+        const unfitBtn = document.createElement('button');
+        unfitBtn.textContent = 'Unfit';
+        unfitBtn.style.fontSize = '9px';
+        unfitBtn.style.padding = '2px 6px';
+        unfitBtn.style.background = '#dc2626';
+        unfitBtn.style.marginTop = '4px';
+        unfitBtn.onclick = (e) => {
+          e.stopPropagation();
+          if(unfitItem('high', index)){
+            updateUI();
+          }
+        };
+        weaponDiv.appendChild(unfitBtn);
+        
         fittingEl.appendChild(weaponDiv);
       });
+    } else {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.style.color = '#64748b';
+      emptyDiv.style.fontSize = '11px';
+      emptyDiv.style.marginBottom = '8px';
+      emptyDiv.textContent = 'No weapons fitted';
+      fittingEl.appendChild(emptyDiv);
     }
     
-    // Show fitted modules
-    if(player.fittedModules.length > 0){
-      const modulesHeader = document.createElement('div');
-      modulesHeader.style.fontSize = '11px';
-      modulesHeader.style.fontWeight = 'bold';
-      modulesHeader.style.color = '#f59e0b';
-      modulesHeader.style.marginTop = '8px';
-      modulesHeader.style.marginBottom = '4px';
-      modulesHeader.textContent = 'Modules';
-      fittingEl.appendChild(modulesHeader);
-    }
+    // Show medium slots (shield/capacitor)
+    const mediumHeader = document.createElement('div');
+    mediumHeader.style.fontSize = '11px';
+    mediumHeader.style.fontWeight = 'bold';
+    mediumHeader.style.color = '#f59e0b';
+    mediumHeader.style.marginTop = '8px';
+    mediumHeader.style.marginBottom = '4px';
+    mediumHeader.textContent = `Medium Slots (${player.mediumSlots.filter(m => m).length}/${player.mediumSlotsMax})`;
+    fittingEl.appendChild(mediumHeader);
     
-    if(player.fittedWeapons.length === 0 && player.fittedModules.length === 0){
-      fittingEl.innerHTML += '<div style="color:#64748b;font-size:11px">No modules fitted</div>';
-    }
-    
-    if(player.fittedModules.length > 0){
-      player.fittedModules.forEach((module, index) => {
+    if(player.mediumSlots.some(m => m)){
+      player.mediumSlots.forEach((module, index) => {
+        if(!module) return;
         const moduleDiv = document.createElement('div');
         moduleDiv.style.fontSize = '11px';
         moduleDiv.style.marginBottom = '6px';
@@ -1670,11 +1942,7 @@
         
         let effectText = '';
         if(module.shieldBonus) effectText += `+${module.shieldBonus} Shield `;
-        if(module.armorBonus) effectText += `+${module.armorBonus} Armor `;
         if(module.shieldRegenBonus) effectText += `+${(module.shieldRegenBonus*100).toFixed(0)}% Shield Regen `;
-        if(module.damageBonus) effectText += `+${(module.damageBonus*100).toFixed(0)}% Damage `;
-        if(module.speedBonus && module.type === 'passive') effectText += `+${(module.speedBonus*100).toFixed(0)}% Speed `;
-        if(module.cargoBonus) effectText += `+${module.cargoBonus} Cargo `;
         if(module.capacitorBonus) effectText += `+${module.capacitorBonus} Cap `;
         if(module.capacitorRegenBonus) effectText += `+${(module.capacitorRegenBonus*100).toFixed(0)}% Cap Regen `;
         
@@ -1684,8 +1952,133 @@
           <div style="color:#64748b;font-size:10px;">PG: ${module.powergridUsage} | CPU: ${module.cpuUsage}</div>
         `;
         
+        const btnContainer = document.createElement('div');
+        btnContainer.style.marginTop = '4px';
+        btnContainer.style.display = 'flex';
+        btnContainer.style.gap = '4px';
+        
+        // Add Activate/Deactivate button for active modules
+        if(module.type === 'active'){
+          if(!player.activeModuleStates) player.activeModuleStates = { medium: [], low: [] };
+          const isActive = player.activeModuleStates.medium[index];
+          const activateBtn = document.createElement('button');
+          activateBtn.textContent = isActive ? 'Deactivate' : 'Activate';
+          activateBtn.style.fontSize = '9px';
+          activateBtn.style.padding = '2px 6px';
+          activateBtn.style.background = isActive ? '#f59e0b' : '#10b981';
+          activateBtn.onclick = (e) => {
+            e.stopPropagation();
+            toggleModuleActivation('medium', index);
+            updateUI();
+          };
+          btnContainer.appendChild(activateBtn);
+        }
+        
+        // Add Unfit button
+        const unfitBtn = document.createElement('button');
+        unfitBtn.textContent = 'Unfit';
+        unfitBtn.style.fontSize = '9px';
+        unfitBtn.style.padding = '2px 6px';
+        unfitBtn.style.background = '#dc2626';
+        unfitBtn.onclick = (e) => {
+          e.stopPropagation();
+          if(unfitItem('medium', index)){
+            updateUI();
+          }
+        };
+        btnContainer.appendChild(unfitBtn);
+        
+        moduleDiv.appendChild(btnContainer);
+        
         fittingEl.appendChild(moduleDiv);
       });
+    } else {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.style.color = '#64748b';
+      emptyDiv.style.fontSize = '11px';
+      emptyDiv.style.marginBottom = '8px';
+      emptyDiv.textContent = 'No modules fitted';
+      fittingEl.appendChild(emptyDiv);
+    }
+    
+    // Show low slots (armor/damage)
+    const lowHeader = document.createElement('div');
+    lowHeader.style.fontSize = '11px';
+    lowHeader.style.fontWeight = 'bold';
+    lowHeader.style.color = '#f59e0b';
+    lowHeader.style.marginTop = '8px';
+    lowHeader.style.marginBottom = '4px';
+    lowHeader.textContent = `Low Slots (${player.lowSlots.filter(m => m).length}/${player.lowSlotsMax})`;
+    fittingEl.appendChild(lowHeader);
+    
+    if(player.lowSlots.some(m => m)){
+      player.lowSlots.forEach((module, index) => {
+        if(!module) return;
+        const moduleDiv = document.createElement('div');
+        moduleDiv.style.fontSize = '11px';
+        moduleDiv.style.marginBottom = '6px';
+        moduleDiv.style.padding = '4px';
+        moduleDiv.style.background = '#1e293b';
+        moduleDiv.style.borderRadius = '2px';
+        
+        let effectText = '';
+        if(module.armorBonus) effectText += `+${module.armorBonus} Armor `;
+        if(module.damageBonus) effectText += `+${(module.damageBonus*100).toFixed(0)}% Damage `;
+        if(module.speedBonus && module.type === 'passive') effectText += `+${(module.speedBonus*100).toFixed(0)}% Speed `;
+        if(module.cargoBonus) effectText += `+${module.cargoBonus} Cargo `;
+        
+        moduleDiv.innerHTML = `
+          <div style="color:#f1f5f9;font-weight:bold;">${module.name}</div>
+          <div style="color:#94a3b8;font-size:10px;">${effectText}</div>
+          <div style="color:#64748b;font-size:10px;">PG: ${module.powergridUsage} | CPU: ${module.cpuUsage}</div>
+        `;
+        
+        const btnContainer = document.createElement('div');
+        btnContainer.style.marginTop = '4px';
+        btnContainer.style.display = 'flex';
+        btnContainer.style.gap = '4px';
+        
+        // Add Activate/Deactivate button for active modules
+        if(module.type === 'active'){
+          if(!player.activeModuleStates) player.activeModuleStates = { medium: [], low: [] };
+          const isActive = player.activeModuleStates.low[index];
+          const activateBtn = document.createElement('button');
+          activateBtn.textContent = isActive ? 'Deactivate' : 'Activate';
+          activateBtn.style.fontSize = '9px';
+          activateBtn.style.padding = '2px 6px';
+          activateBtn.style.background = isActive ? '#f59e0b' : '#10b981';
+          activateBtn.onclick = (e) => {
+            e.stopPropagation();
+            toggleModuleActivation('low', index);
+            updateUI();
+          };
+          btnContainer.appendChild(activateBtn);
+        }
+        
+        // Add Unfit button
+        const unfitBtn = document.createElement('button');
+        unfitBtn.textContent = 'Unfit';
+        unfitBtn.style.fontSize = '9px';
+        unfitBtn.style.padding = '2px 6px';
+        unfitBtn.style.background = '#dc2626';
+        unfitBtn.onclick = (e) => {
+          e.stopPropagation();
+          if(unfitItem('low', index)){
+            updateUI();
+          }
+        };
+        btnContainer.appendChild(unfitBtn);
+        
+        moduleDiv.appendChild(btnContainer);
+        
+        fittingEl.appendChild(moduleDiv);
+      });
+    } else {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.style.color = '#64748b';
+      emptyDiv.style.fontSize = '11px';
+      emptyDiv.textContent = 'No modules fitted';
+      fittingEl.appendChild(emptyDiv);
     }
 
     // Ship Hangar
@@ -1696,8 +2089,23 @@
       // Show current ship
       hangarEl.innerHTML = `<div style="color:#06b6d4;font-size:11px;margin-bottom:8px">Current: ${player.shipName}</div>`;
       
-      // List all ships for sale
-      Object.keys(SHIP_CLASSES).forEach(shipKey => {
+      // Get current system's ships for sale
+      const currentSystem = systems[current];
+      const shipsAvailable = currentSystem.shipsForSale || [];
+      
+      // List ships for sale at this station
+      const shipKeys = Object.keys(SHIP_CLASSES).filter(key => shipsAvailable.includes(key));
+      
+      if(shipKeys.length === 0){
+        const noShipsDiv = document.createElement('div');
+        noShipsDiv.style.color = '#64748b';
+        noShipsDiv.style.fontSize = '10px';
+        noShipsDiv.style.fontStyle = 'italic';
+        noShipsDiv.textContent = 'No ships available at this station';
+        hangarEl.appendChild(noShipsDiv);
+      }
+      
+      shipKeys.forEach(shipKey => {
         const ship = SHIP_CLASSES[shipKey];
         const owned = playerHangar.includes(shipKey);
         const isCurrent = player.shipName === shipKey;
@@ -1746,16 +2154,6 @@
     if(!nearStation){
       shopEl.innerHTML = '<div style="color:#64748b;font-size:11px">Dock at station to fit modules</div>';
     } else {
-      // Show fitting resources
-      const resourceDiv = document.createElement('div');
-      resourceDiv.style.fontSize = '10px';
-      resourceDiv.style.color = '#06b6d4';
-      resourceDiv.style.marginBottom = '8px';
-      const pgPercent = (player.powergridUsed / player.powergridTotal * 100).toFixed(0);
-      const cpuPercent = (player.cpuUsed / player.cpuTotal * 100).toFixed(0);
-      resourceDiv.innerHTML = `Available: PG ${(player.powergridTotal - player.powergridUsed).toFixed(1)}/${player.powergridTotal} (${pgPercent}%) | CPU ${(player.cpuTotal - player.cpuUsed).toFixed(1)}/${player.cpuTotal} (${cpuPercent}%)`;
-      shopEl.appendChild(resourceDiv);
-      
       // === WEAPONS SECTION ===
       const weaponsHeader = document.createElement('div');
       weaponsHeader.style.fontSize = '12px';
@@ -1766,10 +2164,24 @@
       weaponsHeader.textContent = '=== WEAPONS ===';
       shopEl.appendChild(weaponsHeader);
       
-      // Get all weapons
-      const allWeapons = Object.values(WEAPON_MODULES);
+      // Get current system's forSale list
+      const currentSystem = systems[current];
+      const forSale = currentSystem.forSale || [];
+      
+      // Get all weapons that are for sale in this system
+      const allWeapons = Object.values(WEAPON_MODULES).filter(w => forSale.includes(w.name));
+      
+      if(allWeapons.length === 0){
+        const noStockDiv = document.createElement('div');
+        noStockDiv.style.color = '#64748b';
+        noStockDiv.style.fontSize = '10px';
+        noStockDiv.style.fontStyle = 'italic';
+        noStockDiv.textContent = 'No weapons available at this station';
+        shopEl.appendChild(noStockDiv);
+      }
+      
       allWeapons.forEach(weapon => {
-        const isFitted = player.fittedWeapons.some(w => w.name === weapon.name);
+        const isFitted = player.highSlots.some(w => w && w.name === weapon.name);
         
         const weaponDiv = document.createElement('div');
         weaponDiv.style.fontSize = '10px';
@@ -1800,58 +2212,25 @@
         statsDiv.style.color = '#64748b';
         statsDiv.style.fontSize = '9px';
         statsDiv.style.marginBottom = '4px';
-        statsDiv.innerHTML = `DMG: ${weapon.damage} | Range: ${weapon.maxRange}m | ROF: ${(60/weapon.fireRate).toFixed(1)}/s | Cap: ${weapon.capacitorUse}<br>PG: ${weapon.powergridUsage} | CPU: ${weapon.cpuUsage}`;
+        statsDiv.innerHTML = `<span style="color:#ef4444;font-weight:bold">HIGH SLOT</span> | DMG: ${weapon.damage} | Range: ${weapon.maxRange}m | ROF: ${(60/weapon.fireRate).toFixed(1)}/s | Cap: ${weapon.capacitorUse}<br>PG: ${weapon.powergridUsage} | CPU: ${weapon.cpuUsage}`;
         weaponDiv.appendChild(statsDiv);
         
-        // Buttons
-        if(isFitted){
-          const unfitBtn = document.createElement('button');
-          unfitBtn.textContent = 'Unfit';
-          unfitBtn.style.fontSize = '9px';
-          unfitBtn.style.padding = '2px 6px';
-          unfitBtn.style.background = '#dc2626';
-          unfitBtn.onclick = (e) => {
-            e.stopPropagation();
-            if(unfitWeapon(weapon.name)){
-              updateUI();
-            }
-          };
-          weaponDiv.appendChild(unfitBtn);
-        } else {
-          const fitBtn = document.createElement('button');
-          const ownsWeapon = playerWeapons.includes(weapon.name);
-          fitBtn.textContent = ownsWeapon ? 'Fit' : `Buy & Fit (${weapon.price.toLocaleString()} ISK)`;
-          fitBtn.style.fontSize = '9px';
-          fitBtn.style.padding = '2px 6px';
-          fitBtn.style.marginRight = '4px';
-          
-          // Check if can fit
-          const canFit = player.powergridUsed + weapon.powergridUsage <= player.powergridTotal &&
-                        player.cpuUsed + weapon.cpuUsage <= player.cpuTotal;
-          
-          if(!canFit){
-            fitBtn.style.background = '#64748b';
-            fitBtn.disabled = true;
+        // Buy button (always available)
+        const buyBtn = document.createElement('button');
+        buyBtn.textContent = `Buy (${weapon.price.toLocaleString()} ISK)`;
+        buyBtn.style.fontSize = '9px';
+        buyBtn.style.padding = '2px 6px';
+        
+        buyBtn.onclick = (e) => {
+          e.stopPropagation();
+          if(player.credits >= weapon.price){
+            player.credits -= weapon.price;
+            // Add to station inventory
+            addToInventory(nearStation.inventory, {...weapon, type: 'weapon', size: 0.1});
+            updateUI();
           }
-          
-          fitBtn.onclick = (e) => {
-            e.stopPropagation();
-            // Only charge if not owned
-            if(!ownsWeapon){
-              if(player.credits >= weapon.price){
-                player.credits -= weapon.price;
-                playerWeapons.push(weapon.name);
-              } else {
-                return;
-              }
-            }
-            // Fit the weapon
-            if(fitWeapon(weapon.name)){
-              updateUI();
-            }
-          };
-          weaponDiv.appendChild(fitBtn);
-        }
+        };
+        weaponDiv.appendChild(buyBtn);
         
         shopEl.appendChild(weaponDiv);
       });
@@ -1878,7 +2257,9 @@
       };
       
       categories.forEach(cat => {
-        const modules = getModulesByCategory(cat);
+        const allModulesInCategory = getModulesByCategory(cat);
+        // Filter by forSale list
+        const modules = allModulesInCategory.filter(m => forSale.includes(m.name));
         if(modules.length === 0) return;
         
         // Category header
@@ -1893,7 +2274,7 @@
         
         // Module list
         modules.forEach(module => {
-          const isFitted = player.fittedModules.some(m => m.name === module.name);
+          const isFitted = [...player.mediumSlots, ...player.lowSlots].some(m => m && m.name === module.name);
           
           const moduleDiv = document.createElement('div');
           moduleDiv.style.fontSize = '10px';
@@ -1924,63 +2305,103 @@
           statsDiv.style.color = '#64748b';
           statsDiv.style.fontSize = '9px';
           statsDiv.style.marginBottom = '4px';
-          statsDiv.innerHTML = `PG: ${module.powergridUsage} | CPU: ${module.cpuUsage} | ${module.type}`;
+          const slotLabel = module.slotType === 'medium' ? 'MEDIUM SLOT' : 'LOW SLOT';
+          const slotColor = module.slotType === 'medium' ? '#3b82f6' : '#f59e0b';
+          statsDiv.innerHTML = `<span style="color:${slotColor};font-weight:bold">${slotLabel}</span> | PG: ${module.powergridUsage} | CPU: ${module.cpuUsage} | ${module.type}`;
           moduleDiv.appendChild(statsDiv);
           
-          // Buttons
-          if(isFitted){
-            const unfitBtn = document.createElement('button');
-            unfitBtn.textContent = 'Unfit';
-            unfitBtn.style.fontSize = '9px';
-            unfitBtn.style.padding = '2px 6px';
-            unfitBtn.style.background = '#dc2626';
-            unfitBtn.onclick = (e) => {
-              e.stopPropagation();
-              if(unfitModule(module.name)){
-                updateUI();
-              }
-            };
-            moduleDiv.appendChild(unfitBtn);
-          } else {
-            const fitBtn = document.createElement('button');
-            const ownsModule = playerModules.includes(module.name);
-            fitBtn.textContent = ownsModule ? 'Fit' : `Buy & Fit (${module.price.toLocaleString()} ISK)`;
-            fitBtn.style.fontSize = '9px';
-            fitBtn.style.padding = '2px 6px';
-            fitBtn.style.marginRight = '4px';
-            
-            // Check if can fit
-            const canFit = player.powergridUsed + module.powergridUsage <= player.powergridTotal &&
-                          player.cpuUsed + module.cpuUsage <= player.cpuTotal;
-            
-            if(!canFit){
-              fitBtn.style.background = '#64748b';
-              fitBtn.disabled = true;
+          // Buy button (always available)
+          const buyBtn = document.createElement('button');
+          buyBtn.textContent = `Buy (${module.price.toLocaleString()} ISK)`;
+          buyBtn.style.fontSize = '9px';
+          buyBtn.style.padding = '2px 6px';
+          
+          buyBtn.onclick = (e) => {
+            e.stopPropagation();
+            if(player.credits >= module.price){
+              player.credits -= module.price;
+              // Add to station inventory
+              addToInventory(nearStation.inventory, {...module, type: 'module', size: 0.1});
+              updateUI();
             }
-            
-            fitBtn.onclick = (e) => {
-              e.stopPropagation();
-              // Only charge if not owned
-              if(!ownsModule){
-                if(player.credits >= module.price){
-                  player.credits -= module.price;
-                  playerModules.push(module.name);
-                } else {
-                  return; // Can't afford
-                }
-              }
-              // Fit the module
-              if(fitModule(module.name)){
-                updateUI();
-              }
-            };
-            moduleDiv.appendChild(fitBtn);
-          }
+          };
+          moduleDiv.appendChild(buyBtn);
           
           shopEl.appendChild(moduleDiv);
         });
       });
     }
+    
+    // Update module control buttons
+    updateModuleButtons();
+  }
+  
+  function updateModuleButtons(){
+    const container = document.getElementById('moduleButtonsContainer');
+    if(!container) return;
+    
+    container.innerHTML = '';
+    
+    // Initialize activeModuleStates if it doesn't exist
+    if(!player.activeModuleStates){
+      player.activeModuleStates = { medium: [], low: [] };
+    }
+    
+    // Collect all active modules from medium and low slots
+    const activeModules = [];
+    
+    player.mediumSlots.forEach((module, index) => {
+      if(module && module.type === 'active'){
+        activeModules.push({
+          module: module,
+          slotType: 'medium',
+          index: index,
+          isActive: player.activeModuleStates.medium[index]
+        });
+      }
+    });
+    
+    player.lowSlots.forEach((module, index) => {
+      if(module && module.type === 'active'){
+        activeModules.push({
+          module: module,
+          slotType: 'low',
+          index: index,
+          isActive: player.activeModuleStates.low[index]
+        });
+      }
+    });
+    
+    // Create button for each active module
+    activeModules.forEach(({module, slotType, index, isActive}) => {
+      const btn = document.createElement('button');
+      btn.className = 'circularBtn';
+      btn.style.minWidth = '60px';
+      btn.style.height = '60px';
+      btn.style.position = 'relative';
+      btn.style.padding = '4px';
+      btn.style.fontSize = '9px';
+      btn.style.lineHeight = '1.2';
+      btn.style.whiteSpace = 'normal';
+      btn.style.wordWrap = 'break-word';
+      btn.style.background = isActive ? '#10b981' : 'rgba(30,58,78,0.7)';
+      btn.style.borderColor = isActive ? '#059669' : 'rgba(71,85,105,0.7)';
+      
+      // Get short name for button
+      let shortName = module.name;
+      if(shortName.includes('Small')) shortName = shortName.replace('Small ', '');
+      if(shortName.includes(' I')) shortName = shortName.replace(' I', '');
+      
+      btn.innerHTML = shortName;
+      btn.title = `${module.name} - ${isActive ? 'Active' : 'Inactive'}`;
+      
+      btn.onclick = () => {
+        toggleModuleActivation(slotType, index);
+        updateModuleButtons(); // Refresh buttons to show new state
+      };
+      
+      container.appendChild(btn);
+    });
   }
 
   function initiateWarp(){
@@ -2011,137 +2432,312 @@
     return removed;
   }
 
-  // Fitting functions
-  function fitWeapon(weaponName){
-    const weapon = getWeaponModule(weaponName);
-    if(!weapon) return false;
+  // Fitting functions - slot-based system
+  function fitItem(itemName){
+    // Try to get weapon or module
+    let item = getWeaponModule(itemName);
+    let itemType = 'weapon';
+    if(!item){
+      item = getSubsystemModule(itemName);
+      itemType = 'module';
+    }
+    if(!item) return false;
     
-    // Check if already fitted
-    if(player.fittedWeapons.some(w => w.name === weaponName)){
+    // Determine which slot array to use
+    let slots, slotsMax;
+    if(item.slotType === 'high'){
+      slots = player.highSlots;
+      slotsMax = player.highSlotsMax;
+    } else if(item.slotType === 'medium'){
+      slots = player.mediumSlots;
+      slotsMax = player.mediumSlotsMax;
+    } else if(item.slotType === 'low'){
+      slots = player.lowSlots;
+      slotsMax = player.lowSlotsMax;
+    } else {
+      console.error(`Invalid slot type: ${item.slotType}`);
       return false;
+    }
+    
+    // Check if slot is available
+    if(slots.length >= slotsMax){
+      return false; // No free slots
     }
     
     // Check fitting constraints
-    if(player.powergridUsed + weapon.powergridUsage > player.powergridTotal){
+    if(player.powergridUsed + item.powergridUsage > player.powergridTotal){
       return false;
     }
-    if(player.cpuUsed + weapon.cpuUsage > player.cpuTotal){
+    if(player.cpuUsed + item.cpuUsage > player.cpuTotal){
       return false;
     }
     
-    // Fit the weapon
-    player.fittedWeapons.push(weapon);
-    player.powergridUsed += weapon.powergridUsage;
-    player.cpuUsed += weapon.cpuUsage;
+    // Fit the item (already removed from station inventory by caller)
+    slots.push(item);
+    player.powergridUsed += item.powergridUsage;
+    player.cpuUsed += item.cpuUsage;
+    
+    // Initialize activeModuleStates if it doesn't exist
+    if(!player.activeModuleStates){
+      player.activeModuleStates = { medium: [], low: [] };
+    }
+    
+    // Initialize active state for active modules
+    if(itemType === 'module'){
+      if(item.slotType === 'medium'){
+        player.activeModuleStates.medium.push(false);
+      } else if(item.slotType === 'low'){
+        player.activeModuleStates.low.push(false);
+      }
+    }
+    
+    // Apply passive bonuses
+    if(item.type === 'passive' || (itemType === 'module' && item.type === 'passive')){
+      applyModuleBonuses(item, true);
+    }
     
     return true;
+  }
+  
+  function unfitItem(slotType, slotIndex){
+    let slots;
+    if(slotType === 'high'){
+      slots = player.highSlots;
+    } else if(slotType === 'medium'){
+      slots = player.mediumSlots;
+    } else if(slotType === 'low'){
+      slots = player.lowSlots;
+    } else {
+      return false;
+    }
+    
+    if(slotIndex < 0 || slotIndex >= slots.length) return false;
+    
+    const item = slots[slotIndex];
+    
+    // Remove fitting resources
+    player.powergridUsed -= item.powergridUsage;
+    player.cpuUsed -= item.cpuUsage;
+    
+    // Remove passive bonuses
+    if(item.type === 'passive'){
+      applyModuleBonuses(item, false);
+    }
+    
+    // Initialize activeModuleStates if it doesn't exist
+    if(!player.activeModuleStates){
+      player.activeModuleStates = { medium: [], low: [] };
+    }
+    
+    // Remove from slot and corresponding active state
+    slots.splice(slotIndex, 1);
+    if(slotType === 'medium' && player.activeModuleStates.medium.length > slotIndex){
+      player.activeModuleStates.medium.splice(slotIndex, 1);
+    } else if(slotType === 'low' && player.activeModuleStates.low.length > slotIndex){
+      player.activeModuleStates.low.splice(slotIndex, 1);
+    }
+    
+    // Return to station inventory if docked, otherwise to cargo
+    const nearStation = systems[current].stations.find(st => dist(player, st) < 300);
+    const targetInventory = nearStation ? nearStation.inventory : player.cargoItems;
+    const itemType = slotType === 'high' ? 'weapon' : 'module';
+    addToInventory(targetInventory, {
+      ...item,
+      type: itemType,
+      name: item.name,
+      size: 0.1
+    });
+    
+    return true;
+  }
+  
+  // Apply or remove module bonuses
+  function applyModuleBonuses(module, apply){
+    const multiplier = apply ? 1 : -1;
+    
+    if(module.shieldBonus) {
+      player.maxShield += module.shieldBonus * multiplier;
+      player.shield += module.shieldBonus * multiplier;
+    }
+    if(module.armorBonus) {
+      player.maxArmor += module.armorBonus * multiplier;
+      player.armor += module.armorBonus * multiplier;
+    }
+    if(module.shieldRegenBonus) {
+      player.shieldRegen += module.shieldRegenBonus * multiplier;
+    }
+    if(module.capacitorBonus) {
+      player.maxCap += module.capacitorBonus * multiplier;
+      player.cap += module.capacitorBonus * multiplier;
+    }
+    if(module.capacitorRegenBonus) {
+      player.capRegen += module.capacitorRegenBonus * multiplier;
+    }
+    if(module.cargoBonus) {
+      player.cargoCap += module.cargoBonus * multiplier;
+    }
+  }
+  
+  // Toggle active module activation state
+  function toggleModuleActivation(slotType, slotIndex){
+    // Initialize activeModuleStates if it doesn't exist
+    if(!player.activeModuleStates){
+      player.activeModuleStates = { medium: [], low: [] };
+    }
+    
+    let slots, stateArray;
+    if(slotType === 'medium'){
+      slots = player.mediumSlots;
+      stateArray = player.activeModuleStates.medium;
+    } else if(slotType === 'low'){
+      slots = player.lowSlots;
+      stateArray = player.activeModuleStates.low;
+    } else {
+      return false;
+    }
+    
+    if(slotIndex < 0 || slotIndex >= slots.length) return false;
+    
+    const module = slots[slotIndex];
+    if(!module || module.type !== 'active') return false;
+    
+    // Toggle state
+    const newState = !stateArray[slotIndex];
+    stateArray[slotIndex] = newState;
+    
+    // If activating, apply bonuses (for always-on modules like afterburner)
+    if(newState && module.speedBonus && module.category === 'propulsion'){
+      // Afterburner speed bonus handled in update loop
+    }
+    
+    return true;
+  }
+  
+  // Process active modules each frame
+  function processActiveModules(dt){
+    // Initialize activeModuleStates if it doesn't exist
+    if(!player.activeModuleStates){
+      player.activeModuleStates = { medium: [], low: [] };
+    }
+    
+    // Calculate total speed bonus from all active afterburners
+    let totalSpeedMultiplier = 1.0;
+    let hasActiveAfterburner = false;
+    
+    // Process medium slot active modules
+    player.mediumSlots.forEach((module, index) => {
+      if(!module || module.type !== 'active') return;
+      if(!player.activeModuleStates.medium[index]) return; // Not active
+      
+      // Initialize activation timer if needed
+      if(!module.activationTimer) module.activationTimer = 0;
+      
+      // Afterburner - continuous speed boost with cap drain
+      if(module.category === 'propulsion' && module.speedBonus){
+        const capPerFrame = (module.capacitorUse / 60) * dt; // Convert per-second to per-frame
+        if(player.cap >= capPerFrame){
+          player.cap -= capPerFrame;
+          // Accumulate speed bonus (multiplicative stacking)
+          totalSpeedMultiplier *= module.speedBonus;
+          hasActiveAfterburner = true;
+        } else {
+          // Not enough cap, deactivate
+          player.activeModuleStates.medium[index] = false;
+        }
+      }
+      
+      // Shield Booster - periodic activation
+      if(module.category === 'shield' && module.shieldBoostAmount){
+        module.activationTimer -= dt;
+        if(module.activationTimer <= 0){
+          if(player.cap >= module.capacitorUse){
+            player.cap -= module.capacitorUse;
+            player.shield = Math.min(player.maxShield, player.shield + module.shieldBoostAmount);
+            module.activationTimer = module.activationTime;
+          } else {
+            // Not enough cap, deactivate
+            player.activeModuleStates.medium[index] = false;
+          }
+        }
+      }
+      
+      // Armor Repairer - periodic activation
+      if(module.category === 'armor' && module.armorRepairAmount){
+        module.activationTimer -= dt;
+        if(module.activationTimer <= 0){
+          if(player.cap >= module.capacitorUse){
+            player.cap -= module.capacitorUse;
+            player.armor = Math.min(player.maxArmor, player.armor + module.armorRepairAmount);
+            module.activationTimer = module.activationTime;
+          } else {
+            // Not enough cap, deactivate
+            player.activeModuleStates.medium[index] = false;
+          }
+        }
+      }
+    });
+    
+    // Process low slot active modules (currently only armor repairers can be in low slots)
+    player.lowSlots.forEach((module, index) => {
+      if(!module || module.type !== 'active') return;
+      if(!player.activeModuleStates.low[index]) return;
+      
+      // Initialize activation timer if needed
+      if(!module.activationTimer) module.activationTimer = 0;
+      
+      // Armor Repairer - periodic activation
+      if(module.category === 'armor' && module.armorRepairAmount){
+        module.activationTimer -= dt;
+        if(module.activationTimer <= 0){
+          if(player.cap >= module.capacitorUse){
+            player.cap -= module.capacitorUse;
+            player.armor = Math.min(player.maxArmor, player.armor + module.armorRepairAmount);
+            module.activationTimer = module.activationTime;
+          } else {
+            // Not enough cap, deactivate
+            player.activeModuleStates.low[index] = false;
+          }
+        }
+      }
+    });
+    
+    // Apply accumulated speed bonus from all active afterburners
+    if(hasActiveAfterburner && !player.isWarping){
+      player.maxSpeed = player.sublightSpeed * totalSpeedMultiplier;
+    } else if(!hasActiveAfterburner && !player.isWarping){
+      player.maxSpeed = player.sublightSpeed;
+    }
+  }
+  
+  // Legacy functions for backwards compatibility - redirect to new system
+  function fitWeapon(weaponName){
+    return fitItem(weaponName);
   }
   
   function unfitWeapon(weaponName){
-    const index = player.fittedWeapons.findIndex(w => w.name === weaponName);
+    // Find weapon in high slots
+    const index = player.highSlots.findIndex(w => w.name === weaponName);
     if(index === -1) return false;
-    
-    const weapon = player.fittedWeapons[index];
-    
-    // Remove fitting resources
-    player.powergridUsed -= weapon.powergridUsage;
-    player.cpuUsed -= weapon.cpuUsage;
-    
-    // Remove from fitted list
-    player.fittedWeapons.splice(index, 1);
-    return true;
+    return unfitItem('high', index);
   }
   
   function fitModule(moduleName){
-    const module = getSubsystemModule(moduleName);
-    if(!module) return false;
-    
-    // Check if already fitted
-    if(player.fittedModules.some(m => m.name === moduleName)){
-      return false;
-    }
-    
-    // Check fitting constraints
-    if(player.powergridUsed + module.powergridUsage > player.powergridTotal){
-      return false; // Not enough powergrid
-    }
-    if(player.cpuUsed + module.cpuUsage > player.cpuTotal){
-      return false; // Not enough CPU
-    }
-    
-    // Fit the module
-    player.fittedModules.push(module);
-    player.powergridUsed += module.powergridUsage;
-    player.cpuUsed += module.cpuUsage;
-    
-    // Apply passive bonuses immediately
-    if(module.type === 'passive'){
-      if(module.shieldBonus) {
-        player.maxShield += module.shieldBonus;
-        player.shield += module.shieldBonus;
-      }
-      if(module.armorBonus) {
-        player.maxArmor += module.armorBonus;
-        player.armor += module.armorBonus;
-      }
-      if(module.shieldRegenBonus) {
-        player.shieldRegen += module.shieldRegenBonus;
-      }
-      if(module.capacitorBonus) {
-        player.maxCap += module.capacitorBonus;
-        player.cap += module.capacitorBonus;
-      }
-      if(module.capacitorRegenBonus) {
-        player.capRegen += module.capacitorRegenBonus;
-      }
-      if(module.cargoBonus) {
-        player.cargoCap += module.cargoBonus;
-      }
-      // Note: speed and damage bonuses applied dynamically during use
-    }
-    
-    return true;
+    return fitItem(moduleName);
   }
   
   function unfitModule(moduleName){
-    const index = player.fittedModules.findIndex(m => m.name === moduleName);
-    if(index === -1) return false;
+    // Search all slot types
+    let index = player.mediumSlots.findIndex(m => m.name === moduleName);
+    if(index !== -1) return unfitItem('medium', index);
     
-    const module = player.fittedModules[index];
+    index = player.lowSlots.findIndex(m => m.name === moduleName);
+    if(index !== -1) return unfitItem('low', index);
     
-    // Remove fitting resources
-    player.powergridUsed -= module.powergridUsage;
-    player.cpuUsed -= module.cpuUsage;
-    
-    // Remove passive bonuses
-    if(module.type === 'passive'){
-      if(module.shieldBonus) {
-        player.maxShield -= module.shieldBonus;
-        player.shield = Math.min(player.shield, player.maxShield);
-      }
-      if(module.armorBonus) {
-        player.maxArmor -= module.armorBonus;
-        player.armor = Math.min(player.armor, player.maxArmor);
-      }
-      if(module.shieldRegenBonus) {
-        player.shieldRegen -= module.shieldRegenBonus;
-      }
-      if(module.capacitorBonus) {
-        player.maxCap -= module.capacitorBonus;
-        player.cap = Math.min(player.cap, player.maxCap);
-      }
-      if(module.capacitorRegenBonus) {
-        player.capRegen -= module.capacitorRegenBonus;
-      }
-      if(module.cargoBonus) {
-        player.cargoCap -= module.cargoBonus;
-      }
-    }
-    
-    // Remove from fitted list
-    player.fittedModules.splice(index, 1);
-    return true;
+    return false;
   }
+
+  // Old fitModule function removed - replaced above
+  // (old code removed for slot-based system)
 
   function switchShip(shipKey){
     // Save current position and credits
@@ -2150,6 +2746,17 @@
     const savedCredits = player.credits;
     const savedCargoItems = [...player.cargoItems]; // Copy cargo items array
     
+    // Unfit all items and return them to cargo before switching
+    while(player.highSlots.length > 0){
+      unfitItem('high', 0);
+    }
+    while(player.mediumSlots.length > 0){
+      unfitItem('medium', 0);
+    }
+    while(player.lowSlots.length > 0){
+      unfitItem('low', 0);
+    }
+    
     // Create new ship
     const newShip = new Ship(shipKey);
     
@@ -2157,8 +2764,8 @@
     newShip.x = savedX;
     newShip.y = savedY;
     newShip.credits = savedCredits;
-    newShip.cargoItems = savedCargoItems;
-    newShip.cargoUsed = savedCargoItems.reduce((sum, item) => sum + item.size, 0);
+    newShip.cargoItems = player.cargoItems; // Use updated cargo with unfitted items
+    newShip.cargoUsed = player.cargoItems.reduce((sum, item) => sum + item.size, 0);
     // Trim cargo if new ship can't hold it all
     while(newShip.cargoUsed > newShip.cargoCap && newShip.cargoItems.length > 0){
       const removed = newShip.cargoItems.pop();
@@ -2167,6 +2774,12 @@
     
     // Copy over to player (replace all properties)
     Object.assign(player, newShip);
+    
+    // Initialize active module states for new ship
+    player.activeModuleStates = {
+      medium: [],
+      low: []
+    };
     
     updateUI();
   }
@@ -2212,11 +2825,14 @@
   function doMine(){
     if(player.miningCooldown > 0) return;
     
-    // Mining requires a fitted mining laser weapon
-    const miningWeapon = player.fittedWeapons.find(w => w.category === 'mining');
-    if(!miningWeapon) return;
+    // Mining requires fitted mining laser weapons in high slots
+    const miningWeapons = player.highSlots.filter(w => w && w.category === 'mining');
+    if(miningWeapons.length === 0) return;
     
-    if(player.cap < 10) return;
+    // Check capacitor for all mining lasers
+    const totalCapUse = miningWeapons.reduce((sum, w) => sum + w.capacitorUse, 0);
+    if(player.cap < totalCapUse) return;
+    
     const target = selectedTarget && selectedTarget.type==='asteroid' ? selectedTarget.ref : null;
     if(!target) return;
     
@@ -2229,32 +2845,37 @@
     const maxOre = Math.floor((player.cargoCap - player.cargoUsed) / oreSize);
     if(maxOre <= 0) return;
     
-    // Mining yield now comes from weapon, not ship stats
-    const amount = Math.min(target.amount, miningWeapon.miningYield, maxOre);
+    // Combine mining yield from all mining lasers
+    const totalYield = miningWeapons.reduce((sum, w) => sum + w.miningYield, 0);
+    const amount = Math.min(target.amount, totalYield, maxOre);
     target.amount -= amount;
     
     // Add ore to cargo
     for(let i = 0; i < amount; i++){
       addToInventory(player.cargoItems, {type: 'ore', name: target.oreType, size: oreSize, oreType: target.oreType});
     }
-    player.cap -= miningWeapon.capacitorUse;
-    player.miningCooldown = miningWeapon.fireRate;
+    player.cap -= totalCapUse;
+    
+    // Use the fire rate of the first mining laser for cooldown
+    player.miningCooldown = miningWeapons[0].fireRate;
     
     // Update cargo display in real-time so player sees ore being collected
     updateCargoDisplay();
     
-    // Create mining laser visual effect that lasts the full mining cycle
-    fireEffects.push({
-      x1: player.x,
-      y1: player.y,
-      x2: target.x,
-      y2: target.y,
-      life: miningWeapon.fireRate,
-      maxLife: miningWeapon.fireRate,
-      hit: true,
-      owner: 'player',
-      weaponType: 'mining',
-      weaponName: miningWeapon.name
+    // Create mining laser visual effects for each mining laser
+    miningWeapons.forEach(weapon => {
+      fireEffects.push({
+        x1: player.x,
+        y1: player.y,
+        x2: target.x,
+        y2: target.y,
+        life: weapon.fireRate,
+        maxLife: weapon.fireRate,
+        hit: true,
+        owner: 'player',
+        weaponType: 'mining',
+        weaponName: weapon.name
+      });
     });
   }
 
@@ -2262,12 +2883,13 @@
   function fire(){
     if(player.fireCooldown > 0) return;
     
-    // Check if we have any combat weapons fitted (not mining lasers)
-    const combatWeapons = player.fittedWeapons.filter(w => w.category !== 'mining');
+    // Check if we have any combat weapons fitted in high slots (not mining lasers)
+    const combatWeapons = player.highSlots.filter(w => w && w.category !== 'mining');
     if(combatWeapons.length === 0) return;
-    const weapon = combatWeapons[0]; // Use first combat weapon
     
-    if(player.cap < weapon.capacitorUse) return;
+    // Check capacitor for all weapons
+    const totalCapUse = combatWeapons.reduce((sum, w) => sum + w.capacitorUse, 0);
+    if(player.cap < totalCapUse) return;
     
     // Check if near any station (safe zone)
     const s = systems[current];
@@ -2280,50 +2902,56 @@
     const target = selectedTarget.ref;
     const distance = dist(player, target);
     
-    // Don't fire if beyond max range
-    if(distance > weapon.maxRange) return;
-    
-    // Calculate accuracy based on range
-    let accuracy;
-    const range65 = weapon.optimalRange * 0.65;
-    const range85 = weapon.optimalRange * 0.85;
-    
-    if(distance <= range65){
-      accuracy = weapon.accuracyClose;
-    } else if(distance <= range85){
-      accuracy = weapon.accuracyMedium;
-    } else {
-      accuracy = weapon.accuracyLong;
-    }
-    
-    // Roll for hit
-    const hit = Math.random() < accuracy;
-    
-    // Create visual firing effect with weapon info
-    fireEffects.push({
-      x1: player.x,
-      y1: player.y,
-      x2: target.x,
-      y2: target.y,
-      life: 12,
-      maxLife: 12,
-      hit: hit,
-      owner: 'player',
-      weaponType: weapon.category,
-      weaponName: weapon.name
+    // Calculate damage bonus from modules
+    let damageBonus = 1.0;
+    player.lowSlots.forEach(mod => {
+      if(mod && mod.damageBonus) damageBonus += mod.damageBonus;
     });
     
-    if(hit){
-      // Apply damage to target (with damage bonuses from modules)
-      let damageBonus = 1.0;
-      player.fittedModules.forEach(mod => {
-        if(mod.damageBonus) damageBonus += mod.damageBonus;
+    // Fire each combat weapon
+    combatWeapons.forEach(weapon => {
+      // Don't fire if beyond max range
+      if(distance > weapon.maxRange) return;
+      
+      // Calculate accuracy based on range
+      let accuracy;
+      const range65 = weapon.optimalRange * 0.65;
+      const range85 = weapon.optimalRange * 0.85;
+      
+      if(distance <= range65){
+        accuracy = weapon.accuracyClose;
+      } else if(distance <= range85){
+        accuracy = weapon.accuracyMedium;
+      } else {
+        accuracy = weapon.accuracyLong;
+      }
+      
+      // Roll for hit
+      const hit = Math.random() < accuracy;
+      
+      // Create visual firing effect with weapon info
+      fireEffects.push({
+        x1: player.x,
+        y1: player.y,
+        x2: target.x,
+        y2: target.y,
+        life: 12,
+        maxLife: 12,
+        hit: hit,
+        owner: 'player',
+        weaponType: weapon.category,
+        weaponName: weapon.name
       });
-      applyDamage(target, weapon.damage * damageBonus);
-    }
+      
+      if(hit){
+        // Apply damage to target with damage bonuses
+        applyDamage(target, weapon.damage * damageBonus);
+      }
+    });
     
-    player.fireCooldown = weapon.fireRate;
-    player.cap -= weapon.capacitorUse;
+    // Use fire rate of first weapon for cooldown
+    player.fireCooldown = combatWeapons[0].fireRate;
+    player.cap -= totalCapUse;
   }
 
   // Game loop
@@ -2490,11 +3118,18 @@
     if(player.warpCooldown > 0) player.warpCooldown = Math.max(0, player.warpCooldown - dt);
     player.shield = Math.min(player.maxShield, player.shield + player.shieldRegen * dt * 0.1);
     player.cap = Math.min(player.maxCap, player.cap + player.capRegen * dt * 0.1);
+    
+    // Process active modules
+    processActiveModules(dt);
 
     // NPC AI
     s.npcs.forEach(n=>{
       n.x += n.vx * dt;
       n.y += n.vy * dt;
+      
+      // Bounds - keep NPCs within system boundaries
+      n.x = clamp(n.x, 20, s.width - 20);
+      n.y = clamp(n.y, 20, s.height - 20);
       
       // Check if NPC is near any station (safe zone)
       const nearStationNPC = s.stations.some(st => dist(n, st) < 500);
@@ -2584,6 +3219,13 @@
         
         s.wrecks.push(wreck);
         
+        // Schedule NPC respawn after 1 minute
+        if(!s.npcRespawnQueue) s.npcRespawnQueue = [];
+        s.npcRespawnQueue.push({
+          timer: 3600, // 60 seconds * 60 ticks
+          systemIndex: current
+        });
+        
         if(selectedTarget && selectedTarget.type==='npc' && selectedTarget.ref === killed){
           selectedTarget = null;
           player.targetCommand = null;
@@ -2591,7 +3233,51 @@
       }
     }
     
+    // Process NPC respawn queue
+    if(!s.npcRespawnQueue) s.npcRespawnQueue = [];
+    for(let i = s.npcRespawnQueue.length - 1; i >= 0; i--){
+      s.npcRespawnQueue[i].timer -= dt;
+      if(s.npcRespawnQueue[i].timer <= 0){
+        // Respawn NPC at random location
+        s.npcs.push(new NPC(
+          rand(3000, s.width - 3000),
+          rand(3000, s.height - 3000)
+        ));
+        s.npcRespawnQueue.splice(i, 1);
+      }
+    }
+    
+    // Handle depleted asteroids - queue them for respawn
+    if(!s.asteroidRespawnQueue) s.asteroidRespawnQueue = [];
+    const depletedAsteroids = s.asteroids.filter(a => a.amount <= 0);
+    depletedAsteroids.forEach(ast => {
+      s.asteroidRespawnQueue.push({
+        timer: 18000, // 5 minutes * 60 seconds * 60 ticks
+        x: ast.x,
+        y: ast.y,
+        maxAmount: ast.maxAmount,
+        oreType: ast.oreType,
+        systemIndex: current
+      });
+    });
     s.asteroids = s.asteroids.filter(a => a.amount > 0);
+    
+    // Process asteroid respawn queue
+    if(!s.asteroidRespawnQueue) s.asteroidRespawnQueue = [];
+    for(let i = s.asteroidRespawnQueue.length - 1; i >= 0; i--){
+      s.asteroidRespawnQueue[i].timer -= dt;
+      if(s.asteroidRespawnQueue[i].timer <= 0){
+        const respawn = s.asteroidRespawnQueue[i];
+        // Respawn asteroid at same location with same ore type and amount
+        s.asteroids.push(new Asteroid(
+          respawn.x,
+          respawn.y,
+          respawn.maxAmount,
+          respawn.oreType
+        ));
+        s.asteroidRespawnQueue.splice(i, 1);
+      }
+    }
     
     // Update wreck despawn timers
     s.wrecks.forEach(w => {

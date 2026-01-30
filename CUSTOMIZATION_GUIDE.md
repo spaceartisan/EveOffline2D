@@ -89,6 +89,59 @@ Find the ship in `SHIP_CLASSES` and adjust any values. Common tweaks:
 
 1. Delete the ship entry from `SHIP_CLASSES` in `ships.js`
 2. Remove it from any starting inventory if applicable
+3. Remove it from station `shipsForSale` arrays in `systems.js`
+
+---
+
+## Station Inventories
+
+**File:** `systems.js`
+
+### Customizing What Stations Sell
+
+Each station has two arrays that control its inventory:
+
+**forSale** - Weapons and modules available:
+```javascript
+forSale: ['125mm Railgun I', 'Miner I', 'Small Shield Booster I', 'Afterburner I']
+```
+
+**shipsForSale** - Ships available:
+```javascript
+shipsForSale: ['Ibis', 'Velator', 'Atron', 'Rifter']
+```
+
+### Example: Creating a Specialized Station
+
+```javascript
+{
+  name: 'Mining Hub',
+  security: 0.8,
+  station: { x: 10000, y: 10000, name: 'Mining Station' },
+  // Only mining equipment
+  forSale: ['Miner I', 'Miner II', 'Expanded Cargohold I', 'Overdrive Injector System I'],
+  shipsForSale: ['Ibis', 'Velator', 'Atron'],  // Basic ships only
+  // ... other properties
+}
+```
+
+### Station Inventory Guidelines
+
+- **Ibis corvette** - Should be available at ALL stations (free emergency ship)
+- **Major trade hubs** (Jita, 1DQ1-A) - Full selection of items and ships
+- **Faction hubs** - Specialize in faction-appropriate items (Amarr = energy weapons/armor)
+- **Remote stations** - Limited inventory (1-3 ships, basic modules only)
+- **Specialty stations**:
+  - Mining colonies: Mining lasers, cargo expanders, industrial ships
+  - Military bases: Combat weapons, armor/shield modules, combat ships
+  - Trading posts: Mix of items but not full selection
+
+### Item Names Must Match
+
+Use exact names from:
+- `WEAPON_MODULES` in `weapons.js`
+- `SUBSYSTEM_MODULES` in `modules.js`
+- `SHIP_CLASSES` in `ships.js`
 
 ---
 
@@ -248,6 +301,17 @@ const secModifier = ...       // Additional for low/null-sec
 const amount = Math.round(rand(100, 800));  // Adjust min/max
 ```
 
+### Asteroid Respawn Timer
+
+In `main.js`, find the asteroid respawn code (~line 3254):
+
+```javascript
+timer: 18000, // 5 minutes * 60 seconds * 60 ticks
+// Adjust multiplier to change respawn time
+```
+
+Asteroids respawn at their original location with the same ore type and amount.
+
 ---
 
 ## Items & Loot
@@ -339,6 +403,17 @@ const npcCount = sec >= 0.5 ? Math.floor(Math.random() * 3) + 1 :    // High-sec
                  sec >= 0.1 ? Math.floor(Math.random() * 5) + 3 :    // Low-sec: 3-7
                  Math.floor(Math.random() * 8) + 5;                   // Null-sec: 5-12
 ```
+
+### NPC Respawn Timer
+
+In `main.js`, find the NPC respawn code (~line 3225):
+
+```javascript
+timer: 3600, // 60 seconds * 60 ticks (1 minute)
+// Adjust to change respawn time
+```
+
+NPCs respawn at random locations in the system after being destroyed.
 
 ---
 
@@ -496,10 +571,10 @@ Modify the multipliers in `main.js` (search for `0.85` and `0.90`).
 
 ### Starting Resources
 
-In `main.js`, find the Ship class constructor (~line 71):
+In `main.js`, find the Ship class constructor (~line 77):
 
 ```javascript
-this.credits = 50000;        // Starting ISK
+this.credits = 500000000;    // Starting ISK (currently set high for testing)
 ```
 
 And player initialization (~line 343):

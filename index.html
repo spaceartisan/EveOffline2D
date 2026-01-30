@@ -157,7 +157,7 @@
   </style>
 </head>
 <body>
-  <audio id="bgm" loop>
+  <audio id="bgm" loop onerror="console.warn('BGM file not found - continuing without music')">
     <source src="bgm/But Still We Go On.mp3" type="audio/mpeg">
   </audio>
   
@@ -179,6 +179,9 @@
     <!-- Auto Mine button (stacked on top of fire button) -->
     <button id="autoMineBtn" class="circularBtn" style="left: calc(50% + 150px); bottom: 70px;" title="Toggle Auto-Mine">⛏️<br>Mine</button>
     
+    <!-- Active Module Buttons Container (to the right of Fire/Mine buttons) -->
+    <div id="moduleButtonsContainer" style="position: absolute; bottom: 10px; left: calc(50% + 220px); display: flex; flex-direction: column; gap: 5px; z-index: 50;"></div>
+    
     <!-- Bottom right panel - Always visible ship status -->
     <div id="sidePanel">
       <button id="sidePanelToggle" style="position:absolute;top:5px;right:5px;width:22px;height:22px;background:rgba(30,58,78,0.7);color:#f1f5f9;border:1px solid rgba(71,85,105,0.7);cursor:pointer;font-size:14px;padding:0;z-index:10;opacity:0.8;transition:all 0.2s;">-</button>
@@ -199,8 +202,8 @@
           <ul>
             <li><strong>W/S</strong> - Thrust Forward/Back</li>
             <li><strong>A/D</strong> - Turn Left/Right</li>
-            <li><strong>Space</strong> - Fire Weapons</li>
-            <li><strong>M</strong> - Activate Mining Lasers</li>
+            <li><strong>Space</strong> - Toggle Auto-Fire</li>
+            <li><strong>M</strong> - Toggle Auto-Mine</li>
             <li><strong>Click</strong> - Select Target</li>
           </ul>
         </div>

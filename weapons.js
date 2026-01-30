@@ -9,6 +9,7 @@ const WEAPON_MODULES = {
   '125mm Railgun I': {
     type: 'weapon',
     category: 'turret',
+    slotType: 'high',
     size: 'small',
     name: '125mm Railgun I',
     description: 'Basic hybrid turret with good range',
@@ -36,6 +37,7 @@ const WEAPON_MODULES = {
   '150mm Railgun I': {
     type: 'weapon',
     category: 'turret',
+    slotType: 'high',
     size: 'small',
     name: '150mm Railgun I',
     description: 'Upgraded railgun with better damage',
@@ -59,6 +61,7 @@ const WEAPON_MODULES = {
   'Light Neutron Blaster I': {
     type: 'weapon',
     category: 'turret',
+    slotType: 'high',
     size: 'small',
     name: 'Light Neutron Blaster I',
     description: 'Close-range blaster with high damage',
@@ -82,6 +85,7 @@ const WEAPON_MODULES = {
   'Light Beam Laser I': {
     type: 'weapon',
     category: 'turret',
+    slotType: 'high',
     size: 'small',
     name: 'Light Beam Laser I',
     description: 'Energy weapon with good range and accuracy',
@@ -105,6 +109,7 @@ const WEAPON_MODULES = {
   '200mm AutoCannon I': {
     type: 'weapon',
     category: 'turret',
+    slotType: 'high',
     size: 'small',
     name: '200mm AutoCannon I',
     description: 'Projectile weapon with no capacitor usage',
@@ -131,6 +136,7 @@ const WEAPON_MODULES = {
   'Rocket Launcher I': {
     type: 'weapon',
     category: 'missile',
+    slotType: 'high',
     size: 'small',
     name: 'Rocket Launcher I',
     description: 'Short-range missile launcher - always hits',
@@ -157,6 +163,7 @@ const WEAPON_MODULES = {
   'Miner I': {
     type: 'weapon',
     category: 'mining',
+    slotType: 'high',
     size: 'small',
     name: 'Miner I',
     description: 'Basic mining laser',
@@ -179,6 +186,7 @@ const WEAPON_MODULES = {
   'Miner II': {
     type: 'weapon',
     category: 'mining',
+    slotType: 'high',
     size: 'small',
     name: 'Miner II',
     description: 'Improved mining laser with better yield',
