@@ -11,6 +11,7 @@ This guide will help you modify and customize various aspects of the game. All v
 - [Ore & Mining](#ore--mining)
 - [Items & Loot](#items--loot)
 - [Star Systems](#star-systems)
+- [Anomalies & Exploration](#anomalies--exploration)
 - [Visual Settings](#visual-settings)
 - [Game Mechanics](#game-mechanics)
 
@@ -414,6 +415,189 @@ timer: 3600, // 60 seconds * 60 ticks (1 minute)
 ```
 
 NPCs respawn at random locations in the system after being destroyed.
+
+---
+
+## Anomalies & Exploration
+
+**File:** `anomalies.js`
+
+### Anomaly Types
+
+The game includes 9 anomaly types across 3 categories:
+
+**Combat Sites:**
+```javascript
+'guristas_hideout': {
+  category: 'combat',
+  difficulty: 'easy',
+  enemies: { count: 3, avgBounty: 5000 }
+},
+'serpentis_den': {
+  category: 'combat', 
+  difficulty: 'medium',
+  enemies: { count: 5, avgBounty: 8000 }
+},
+'blood_command': {
+  category: 'combat',
+  difficulty: 'hard',
+  enemies: { count: 7, avgBounty: 12000 }
+}
+```
+
+**Mining Sites:**
+```javascript
+'ore_deposit': {
+  category: 'mining',
+  difficulty: 'easy',
+  asteroids: { count: 4, richness: 1.5 }
+},
+'rich_belts': {
+  category: 'mining',
+  difficulty: 'medium', 
+  asteroids: { count: 6, richness: 2.0 }
+},
+'motherlode': {
+  category: 'mining',
+  difficulty: 'hard',
+  asteroids: { count: 8, richness: 3.0 }
+}
+```
+
+**Data/Relic Sites:**
+```javascript
+'data_site': {
+  category: 'data',
+  difficulty: 'easy',
+  containers: { count: 2, avgValue: 8000 }
+},
+'relic_site': {
+  category: 'relic',
+  difficulty: 'medium',
+  containers: { count: 3, avgValue: 15000 }
+},
+'sleeper_cache': {
+  category: 'data',
+  difficulty: 'hard',
+  containers: { count: 4, avgValue: 25000 }
+}
+```
+
+### Adding New Anomaly Types
+
+Add to the `ANOMALY_TYPES` object in `anomalies.js`:
+
+```javascript
+'your_anomaly': {
+  category: 'combat',  // or 'mining', 'data', 'relic'
+  difficulty: 'medium', // 'easy', 'medium', or 'hard'
+  name: 'Your Anomaly Name',
+  description: 'Description of the anomaly',
+  
+  // For combat sites:
+  enemies: {
+    count: 5,        // Number of NPCs
+    avgBounty: 8000  // Average ISK per NPC
+  },
+  
+  // For mining sites:
+  asteroids: {
+    count: 6,        // Number of asteroids
+    richness: 2.0    // Multiplier for ore amount
+  },
+  
+  // For data/relic sites:
+  containers: {
+    count: 3,        // Number of loot containers
+    avgValue: 15000  // Average loot value
+  }
+}
+```
+
+### Anomaly Loot Tables
+
+Modify the `ANOMALY_LOOT` object in `anomalies.js`:
+
+```javascript
+combat: [
+  { item: 'Metal Scraps', amount: [5, 15], chance: 0.8 },
+  { item: 'Rare Components', amount: [1, 3], chance: 0.3 }
+],
+mining: [
+  { item: 'Veldspar', amount: [50, 150], chance: 1.0 },
+  { item: 'Jaspet', amount: [30, 80], chance: 0.6 }
+],
+data: [
+  { item: 'Datacores', amount: [2, 8], chance: 0.7 },
+  { item: 'Ancient Artifacts', amount: [1, 2], chance: 0.2 }
+]
+```
+
+### Anomaly Spawn Rates
+
+In `main.js`, find anomaly generation code (~line 410):
+
+```javascript
+// Anomaly count based on security level
+const anomalyCount = sec >= 0.5 ? rand(2,3) :  // High-sec: 2-3
+                     sec >= 0.1 ? rand(2,4) :  // Low-sec: 2-4  
+                     4;                         // Null-sec: 4 (max)
+```
+
+### Anomaly Respawn Times
+
+In `anomalies.js`, modify respawn timers:
+
+```javascript
+easy: { min: 1800, max: 2400 },    // 30-40 minutes
+medium: { min: 2400, max: 3000 },  // 40-50 minutes
+hard: { min: 3000, max: 3600 }     // 50-60 minutes
+```
+
+### Pocket Coordinates
+
+Anomalies spawn in isolated "pocket" space. In `main.js` (~line 419):
+
+```javascript
+const pocketCoords = [
+  {x: 10000, y: -40000},   // Slot 1
+  {x: -40000, y: 10000},   // Slot 2
+  {x: 10000, y: 50000},    // Slot 3
+  {x: 50000, y: 10000}     // Slot 4
+];
+```
+
+Adjust coordinates to change pocket locations (must be outside 0-20000 normal space).
+
+### Pocket Boundary Size
+
+In `main.js`, find anomaly boundary code (~line 3668):
+
+```javascript
+const maxRadius = 5000;  // Pocket radius in units
+```
+
+Increase for larger exploration areas, decrease for tighter combat zones.
+
+### Core Probe Launcher
+
+Module definition in `modules.js` (~line 257):
+
+```javascript
+'Core Probe Launcher I': {
+  category: 'utility',
+  slot: 'medium',
+  price: 25000,  // Cost to buy
+  description: 'Scan for cosmic signatures'
+}
+```
+
+**Tips:**
+- Higher difficulty anomalies give better rewards
+- Mining sites richness multiplies ore amounts
+- Container sites give instant ISK + items
+- Anomalies are limited to 4 per system (max)
+- Each anomaly occupies one of 4 unique pocket coordinates
 
 ---
 

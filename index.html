@@ -167,6 +167,9 @@
     <!-- Fullscreen button -->
     <button id="fullscreenBtn" title="Toggle Fullscreen">⛶</button>
     
+    <!-- Anomaly Scanner button (left of grid button) -->
+    <button id="anomalyBtn" class="circularBtn" style="left: calc(50% - 280px); bottom: 70px;" title="Anomaly Scanner (P)">🔍<br>Scan</button>
+    
     <!-- Grid Toggle button (above star map button) -->
     <button id="gridToggleBtn" class="circularBtn" style="left: calc(50% - 210px); bottom: 70px;" title="Toggle Grid">⊞<br>Grid</button>
     
@@ -239,6 +242,24 @@
       </div>
     </div>
     
+    <!-- Anomaly window -->
+    <div id="anomalyWindow" style="display:none;position:absolute;top:10%;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.95);border:2px solid #10b981;border-radius:8px;width:500px;max-height:80vh;overflow-y:auto;padding:20px;z-index:100;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+      <button id="anomalyWindowClose" style="position:absolute;top:10px;right:10px;width:30px;height:30px;background:#dc2626;color:#fff;border:1px solid #991b1b;cursor:pointer;font-size:18px;padding:0;border-radius:4px;font-weight:bold;">×</button>
+      
+      <h2 style="margin:0 0 20px 0;color:#10b981;font-size:24px;text-align:center;">Anomaly Scanner</h2>
+      
+      <div id="anomalyExitPanel" style="display:none;margin-bottom:15px;padding:12px;background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:4px;">
+        <div style="color:#10b981;font-weight:bold;font-size:13px;margin-bottom:4px;">Inside Anomaly Pocket</div>
+        <div id="anomalyExitInfo" style="font-size:11px;color:#94a3b8;margin-bottom:8px;"></div>
+        <button id="warpToStationBtn" style="width:100%;padding:8px;font-size:12px;background:#0891b2;color:#fff;border:1px solid #0e7490;cursor:pointer;border-radius:4px;font-weight:bold;margin-bottom:4px;">Warp to Station</button>
+        <div style="font-size:10px;color:#64748b;font-style:italic;">Or select any destination to exit</div>
+      </div>
+      
+      <div class="panel" style="margin:0;">
+        <div id="anomalyScanner"></div>
+      </div>
+    </div>
+    
     <!-- Wreck window - Only visible when looting -->
     <div id="wreckWindow" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,0.95);border:2px solid #475569;border-radius:8px;width:600px;max-height:70vh;overflow-y:auto;padding:20px;z-index:100;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <button id="wreckWindowClose" style="position:absolute;top:10px;right:10px;width:30px;height:30px;background:#dc2626;color:#fff;border:1px solid #991b1b;cursor:pointer;font-size:18px;padding:0;border-radius:4px;font-weight:bold;">×</button>
@@ -274,6 +295,7 @@
   <script src="ships.js"></script>
   <script src="weapons.js"></script>
   <script src="modules.js"></script>
+  <script src="anomalies.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

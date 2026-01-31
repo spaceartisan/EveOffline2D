@@ -7,7 +7,7 @@ const SYSTEM_DATA = [
     name: 'Jita', security: 1.0, gates: [1, 2], 
     station: { x: 10000, y: 10000, name: 'Jita IV - Caldari Navy Assembly Plant' }, 
     mapX: 380, mapY: 200, color: '#3b82f6', category: 'navy',
-    forSale: ['125mm Railgun I', '150mm Railgun I', 'Light Beam Laser I', 'Rocket Launcher I', 'Miner I', 'Miner II', 'Small Shield Booster I', 'Small Shield Extender I', 'Shield Recharger I', 'Damage Control I', 'Micro Auxiliary Power Core I', 'Capacitor Battery I', 'Capacitor Recharger I', 'Overdrive Injector System I', 'Nanofiber Internal Structure I', 'Ballistic Control System I', 'Tracking Enhancer I', 'Cargo Scanner I'],
+    forSale: ['Core Probe Launcher I','125mm Railgun I', '150mm Railgun I', 'Light Beam Laser I', 'Rocket Launcher I', 'Miner I', 'Miner II', 'Small Shield Booster I', 'Small Shield Extender I', 'Shield Recharger I', 'Damage Control I', 'Micro Auxiliary Power Core I', 'Capacitor Battery I', 'Capacitor Recharger I', 'Overdrive Injector System I', 'Nanofiber Internal Structure I', 'Ballistic Control System I', 'Tracking Enhancer I', 'Cargo Scanner I'],
     shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Rifter', 'Ferox', 'Apocalypse']
   },            // 0 - Major trade hub, full selection
   { 

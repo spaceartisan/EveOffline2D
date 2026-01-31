@@ -45,3 +45,8 @@ _(None currently)_
 - ✅ Implemented asteroid respawn system (5 minute timer)
 - ✅ Changed NPC respawn timer from 30 seconds to 1 minute
 - ✅ Added ship repair service at stations (100 ISK per damage point)
+- ✅ Created anomaly exploration system (Phase 1 - Scanner UI complete)
+  - Added anomalies.js with 9 anomaly type definitions
+  - Added Core Probe Launcher module for scanning
+  - Implemented anomaly scanner UI panel
+  - Anomalies spawn per system (2-6 based on security status)

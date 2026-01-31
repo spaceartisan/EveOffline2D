@@ -262,6 +262,22 @@ const SUBSYSTEM_MODULES = {
     cpuUsage: 15,
     
     price: 15000
+  },
+  
+  'Core Probe Launcher I': {
+    type: 'passive',
+    category: 'utility',
+    slotType: 'medium',
+    size: 'small',
+    name: 'Core Probe Launcher I',
+    description: 'Allows scanning of cosmic anomalies and signatures',
+    
+    scanStrength: 1.0,  // Future use for scan difficulty
+    
+    powergridUsage: 1,
+    cpuUsage: 20,
+    
+    price: 25000
   }
 };
 

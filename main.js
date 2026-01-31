@@ -94,6 +94,11 @@
         low: []
       };
       
+      // Anomaly state
+      this.inAnomaly = false;
+      this.currentAnomaly = null;
+      this.anomalyBackup = null; // Store position before entering anomaly
+      
       // Commands
       this.targetCommand=null;
     }
@@ -197,6 +202,8 @@
       this.mapY = 0; // Star map Y position
       this.forSale = []; // Items for sale at station
       this.shipsForSale = []; // Ships for sale at station
+      this.anomalies = []; // Cosmic anomalies in system
+      this.anomalyRespawnQueue = []; // Completed anomalies waiting to respawn
     }
   }
 
@@ -403,6 +410,44 @@
         rand(3000, 17000)
       ));
     }
+    
+    // Generate cosmic anomalies (max 4 for unique pocket locations)
+    const anomalyCount = Math.min(4, sec >= 0.5 ? Math.floor(Math.random() * 2) + 2 :    // High-sec: 2-3
+                         sec >= 0.1 ? Math.floor(Math.random() * 3) + 2 :    // Low-sec: 2-4
+                         4);                                                  // Null-sec: always 4
+    
+    // Pocket coordinates for each anomaly slot
+    const pocketCoords = [
+      {x: 10000, y: -40000},
+      {x: -40000, y: 10000},
+      {x: 10000, y: 50000},
+      {x: 50000, y: 10000}
+    ];
+    
+    for (let i = 0; i < anomalyCount; i++) {
+      // Select random anomaly type
+      const typeKeys = Object.keys(ANOMALY_TYPES);
+      const randomType = typeKeys[Math.floor(Math.random() * typeKeys.length)];
+      const anomalyData = ANOMALY_TYPES[randomType];
+      
+      // Some anomalies start pre-discovered
+      const discovered = !anomalyData.requiresScanning || Math.random() < 0.3;
+      
+      sys.anomalies.push({
+        id: Math.random().toString(36).substr(2, 9),
+        typeName: randomType,
+        type: anomalyData.type,
+        name: anomalyData.name,
+        category: anomalyData.type,
+        difficulty: anomalyData.difficulty,
+        discovered: discovered,
+        x: rand(3000, 17000),  // Location in system for visual marker
+        y: rand(3000, 17000),
+        pocketX: pocketCoords[i].x,  // Unique pocket coordinates
+        pocketY: pocketCoords[i].y,
+        rewardClaimed: false
+      });
+    }
   });
   
   // Note: Static star map positions are now loaded from systems.js data
@@ -436,6 +481,10 @@
   const hangarEl = document.getElementById('hangar');
   const fittingEl = document.getElementById('fitting');
   const shopEl = document.getElementById('shop');
+  const anomalyScannerEl = document.getElementById('anomalyScanner');
+  const anomalyExitPanel = document.getElementById('anomalyExitPanel');
+  const anomalyExitInfo = document.getElementById('anomalyExitInfo');
+  const exitAnomalyBtn = document.getElementById('exitAnomalyBtn');
   const bgm = document.getElementById('bgm');
   const sidePanel = document.getElementById('sidePanel');
   
@@ -508,6 +557,12 @@
         openStarMap();
       }
     }
+    
+    // Toggle anomaly window with 'P' key
+    if(e.key.toLowerCase() === 'p' && !e.repeat){
+      e.preventDefault();
+      toggleAnomalyWindow();
+    }
   });
   window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
 
@@ -567,6 +622,13 @@
   gridToggleBtn.classList.add('active');
   gridToggleBtn.innerHTML = '⊞<br>Grid<br>ON';
   
+  // Anomaly Scanner button
+  const anomalyBtn = document.getElementById('anomalyBtn');
+  anomalyBtn.addEventListener('click', () => {
+    startMusic();
+    toggleAnomalyWindow();
+  });
+  
   // Star Map button
   const starMapBtn = document.getElementById('starMapBtn');
   starMapBtn.addEventListener('click', () => {
@@ -589,6 +651,53 @@
     startMusic();
     toggleAutoMine();
   });
+  
+  // Anomaly window management
+  const anomalyWindow = document.getElementById('anomalyWindow');
+  const anomalyWindowClose = document.getElementById('anomalyWindowClose');
+  const warpToStationBtn = document.getElementById('warpToStationBtn');
+  let anomalyWindowOpen = false;
+  
+  anomalyWindowClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeAnomalyWindow();
+  });
+  
+  if(warpToStationBtn){
+    warpToStationBtn.addEventListener('click', () => {
+      // Find nearest station in current system
+      const currentSystem = systems[current];
+      if(currentSystem.stations && currentSystem.stations.length > 0){
+        const station = currentSystem.stations[0]; // Usually only one station per system
+        // Exit anomaly and warp to station
+        if(player.warpWarmup === 0 && player.warpCooldown === 0 && !player.isWarping){
+          player.warpWarmup = 180;
+          player.warpTarget = {x: station.x, y: station.y};
+          player.targetCommand = null;
+          console.log('Warping to station:', station.name);
+        }
+      }
+    });
+  }
+  
+  function openAnomalyWindow(){
+    anomalyWindow.style.display = 'block';
+    anomalyWindowOpen = true;
+    updateAnomalyScanner();
+  }
+  
+  function closeAnomalyWindow(){
+    anomalyWindow.style.display = 'none';
+    anomalyWindowOpen = false;
+  }
+  
+  function toggleAnomalyWindow(){
+    if(anomalyWindowOpen){
+      closeAnomalyWindow();
+    } else {
+      openAnomalyWindow();
+    }
+  }
   
   // Station window management
   const stationWindow = document.getElementById('stationWindow');
@@ -1374,6 +1483,16 @@
   function updateUI(){
     // Update cargo display
     updateCargoDisplay();
+    
+    // Update anomaly exit panel visibility
+    if(anomalyExitPanel && anomalyExitInfo){
+      if(player.inAnomaly && player.currentAnomaly){
+        anomalyExitPanel.style.display = 'block';
+        anomalyExitInfo.textContent = `${player.currentAnomaly.name} - ${player.currentAnomaly.category.toUpperCase()}`;
+      } else {
+        anomalyExitPanel.style.display = 'none';
+      }
+    }
     
     const s = systems[current];
     const nearStation = systems[current].stations.find(st => dist(player, st) < 300);
@@ -2334,6 +2453,11 @@
     
     // Update module control buttons
     updateModuleButtons();
+    
+    // Update anomaly scanner if window is open
+    if(anomalyWindowOpen){
+      updateAnomalyScanner();
+    }
   }
   
   function updateModuleButtons(){
@@ -2404,16 +2528,442 @@
     });
   }
 
-  function initiateWarp(){
-    if(!selectedTarget || !selectedTarget.ref) return;
-    if(player.isWarping || player.warpWarmup > 0 || player.warpCooldown > 0) return;
-    const target = selectedTarget.ref;
-    const d = dist(player, target);
-    if(d < 4000) return; // Too close to warp
+  function updateAnomalyScanner(){
+    if(!anomalyScannerEl) return;
     
+    anomalyScannerEl.innerHTML = '';
+    
+    // Update exit panel visibility
+    if(anomalyExitPanel){
+      if(player.inAnomaly && player.currentAnomaly){
+        anomalyExitPanel.style.display = 'block';
+        if(anomalyExitInfo){
+          anomalyExitInfo.textContent = `${player.currentAnomaly.name} - ${player.currentAnomaly.difficulty.toUpperCase()}`;
+        }
+      } else {
+        anomalyExitPanel.style.display = 'none';
+      }
+    }
+    
+    const currentSystem = systems[current];
+    if(!currentSystem || !currentSystem.anomalies) return;
+    
+    // Check if player has Core Probe Launcher fitted
+    const hasProbes = [...player.mediumSlots, ...player.lowSlots].some(m => 
+      m && m.name === 'Core Probe Launcher I'
+    );
+    
+    // Separate discovered and undiscovered anomalies
+    const discovered = currentSystem.anomalies.filter(a => a.discovered);
+    const undiscovered = currentSystem.anomalies.filter(a => !a.discovered);
+    
+    // Display discovered anomalies
+    if(discovered.length > 0){
+      const header = document.createElement('div');
+      header.style.color = '#10b981';
+      header.style.fontSize = '11px';
+      header.style.fontWeight = 'bold';
+      header.style.marginBottom = '6px';
+      header.textContent = 'Discovered Signatures';
+      anomalyScannerEl.appendChild(header);
+      
+      discovered.forEach(anomaly => {
+        const anomalyDiv = document.createElement('div');
+        anomalyDiv.style.fontSize = '10px';
+        anomalyDiv.style.marginBottom = '6px';
+        anomalyDiv.style.padding = '4px';
+        anomalyDiv.style.background = '#1e293b';
+        anomalyDiv.style.borderRadius = '2px';
+        anomalyDiv.style.border = '1px solid #10b981';
+        
+        // Anomaly ID and name
+        const nameDiv = document.createElement('div');
+        nameDiv.style.color = '#f1f5f9';
+        nameDiv.style.fontWeight = 'bold';
+        nameDiv.style.marginBottom = '2px';
+        nameDiv.textContent = `${anomaly.id} - ${anomaly.name}`;
+        anomalyDiv.appendChild(nameDiv);
+        
+        // Anomaly details
+        const detailsDiv = document.createElement('div');
+        detailsDiv.style.color = '#94a3b8';
+        detailsDiv.style.fontSize = '9px';
+        detailsDiv.style.marginBottom = '4px';
+        detailsDiv.textContent = `${anomaly.category.toUpperCase()} | ${anomaly.difficulty}`;
+        anomalyDiv.appendChild(detailsDiv);
+        
+        // Warp button
+        const warpBtn = document.createElement('button');
+        warpBtn.textContent = 'Warp to Anomaly';
+        warpBtn.style.fontSize = '9px';
+        warpBtn.style.padding = '2px 6px';
+        warpBtn.style.width = '100%';
+        warpBtn.style.background = '#0891b2';
+        warpBtn.onclick = (e) => {
+          e.stopPropagation();
+          // Check if already warping or on cooldown
+          if(player.isWarping || player.warpWarmup > 0 || player.warpCooldown > 0) {
+            console.log('Cannot warp: already warping or on cooldown');
+            return;
+          }
+          // Initiate warp to anomaly (no minimum distance for anomalies)
+          player.warpWarmup = 180; // 3 second warmup
+          player.warpTarget = {x: anomaly.x, y: anomaly.y};
+          player.targetCommand = null;
+          console.log(`Warping to anomaly: ${anomaly.name} at (${anomaly.x.toFixed(0)}, ${anomaly.y.toFixed(0)})`);
+        };
+        anomalyDiv.appendChild(warpBtn);
+        
+        anomalyScannerEl.appendChild(anomalyDiv);
+      });
+    }
+    
+    // Display undiscovered signatures (only if has probe launcher)
+    if(undiscovered.length > 0){
+      const header = document.createElement('div');
+      header.style.color = '#64748b';
+      header.style.fontSize = '11px';
+      header.style.fontWeight = 'bold';
+      header.style.marginTop = discovered.length > 0 ? '12px' : '0';
+      header.style.marginBottom = '6px';
+      header.textContent = 'Unidentified Signatures';
+      anomalyScannerEl.appendChild(header);
+      
+      undiscovered.forEach(anomaly => {
+        const anomalyDiv = document.createElement('div');
+        anomalyDiv.style.fontSize = '10px';
+        anomalyDiv.style.marginBottom = '6px';
+        anomalyDiv.style.padding = '4px';
+        anomalyDiv.style.background = '#1e293b';
+        anomalyDiv.style.borderRadius = '2px';
+        anomalyDiv.style.border = '1px solid #64748b';
+        
+        // Signature ID only (not revealed yet)
+        const nameDiv = document.createElement('div');
+        nameDiv.style.color = '#94a3b8';
+        nameDiv.style.fontWeight = 'bold';
+        nameDiv.style.marginBottom = '2px';
+        nameDiv.textContent = `${anomaly.id} - Unknown Signature`;
+        anomalyDiv.appendChild(nameDiv);
+        
+        // Scan button (only if has probe launcher)
+        if(hasProbes){
+          const scanBtn = document.createElement('button');
+          scanBtn.textContent = 'Scan Signature';
+          scanBtn.style.fontSize = '9px';
+          scanBtn.style.padding = '2px 6px';
+          scanBtn.style.width = '100%';
+          scanBtn.style.background = '#3b82f6';
+          scanBtn.onclick = (e) => {
+            e.stopPropagation();
+            // Mark as discovered
+            anomaly.discovered = true;
+            updateUI(); // Refresh to show in discovered list
+          };
+          anomalyDiv.appendChild(scanBtn);
+        } else {
+          // Show message about needing probe launcher
+          const msgDiv = document.createElement('div');
+          msgDiv.style.color = '#ef4444';
+          msgDiv.style.fontSize = '9px';
+          msgDiv.style.marginTop = '2px';
+          msgDiv.textContent = 'Requires Core Probe Launcher';
+          anomalyDiv.appendChild(msgDiv);
+        }
+        
+        anomalyScannerEl.appendChild(anomalyDiv);
+      });
+    }
+    
+    // Show message if no anomalies in system
+    if(discovered.length === 0 && undiscovered.length === 0){
+      const msgDiv = document.createElement('div');
+      msgDiv.style.color = '#64748b';
+      msgDiv.style.fontSize = '11px';
+      msgDiv.textContent = 'No cosmic signatures detected';
+      anomalyScannerEl.appendChild(msgDiv);
+    }
+  }
+
+  function canWarpToTarget(){
+    if(!selectedTarget || !selectedTarget.ref) return false;
+    if(player.isWarping || player.warpWarmup > 0 || player.warpCooldown > 0) return false;
+    const target = selectedTarget.ref;
+    
+    // Cannot warp to entities inside anomalies
+    if(target.inAnomaly) return false;
+    
+    const d = dist(player, target);
+    if(d < 4000) return false; // Too close to warp
+    
+    return true;
+  }
+
+  function initiateWarp(){
+    if(!canWarpToTarget()) return;
+    
+    const target = selectedTarget.ref;
     player.warpWarmup = 180; // 3 second warmup
     player.warpTarget = {x: target.x, y: target.y};
     player.targetCommand = null;
+  }
+
+  // Anomaly pocket functions
+  function enterAnomaly(anomaly){
+    if(player.inAnomaly) return; // Already in anomaly
+    
+    console.log('Entering anomaly:', anomaly.name);
+    
+    // Store current position and state
+    player.anomalyBackup = {
+      x: player.x,
+      y: player.y,
+      vx: player.vx,
+      vy: player.vy
+    };
+    
+    // Set anomaly state
+    player.inAnomaly = true;
+    player.currentAnomaly = anomaly;
+    player.currentAnomalyId = anomaly.id; // Track which anomaly we're in
+    
+    // Move player to pocket space (unique coordinates for this anomaly)
+    player.x = anomaly.pocketX;
+    player.y = anomaly.pocketY;
+    player.vx = 0;
+    player.vy = 0;
+    
+    // Generate pocket content based on anomaly type
+    generateAnomalyContent(anomaly);
+    
+    // Open anomaly window if not already open
+    if(!anomalyWindowOpen){
+      openAnomalyWindow();
+    } else {
+      updateAnomalyScanner();
+    }
+    
+    updateUI();
+  }
+  
+  function exitAnomaly(){
+    if(!player.inAnomaly) return;
+    
+    console.log('Exiting anomaly');
+    
+    const completedAnomaly = player.currentAnomaly;
+    
+    // Clear pocket content
+    clearAnomalyContent();
+    
+    // Restore player position
+    if(player.anomalyBackup){
+      player.x = player.anomalyBackup.x;
+      player.y = player.anomalyBackup.y;
+      player.vx = player.anomalyBackup.vx;
+      player.vy = player.anomalyBackup.vy;
+    }
+    
+    // If anomaly was completed, mark for respawn
+    if(completedAnomaly && completedAnomaly.rewardClaimed){
+      const currentSystem = systems[current];
+      const anomalyData = ANOMALY_TYPES[completedAnomaly.typeName];
+      
+      // Remove from active anomalies
+      currentSystem.anomalies = currentSystem.anomalies.filter(a => a.id !== completedAnomaly.id);
+      
+      // Add to respawn queue
+      if(anomalyData && anomalyData.respawnTime){
+        currentSystem.anomalyRespawnQueue.push({
+          typeName: completedAnomaly.typeName,
+          x: completedAnomaly.x,
+          y: completedAnomaly.y,
+          pocketX: completedAnomaly.pocketX,  // Preserve pocket location
+          pocketY: completedAnomaly.pocketY,
+          timer: anomalyData.respawnTime / 16.666  // Convert milliseconds to frames
+        });
+      }
+    }
+    
+    // Reset anomaly state
+    player.inAnomaly = false;
+    player.currentAnomaly = null;
+    player.currentAnomalyId = null;
+    player.anomalyBackup = null;
+    
+    // Update anomaly window if open
+    if(anomalyWindowOpen){
+      updateAnomalyScanner();
+    }
+    
+    updateUI();
+  }
+  
+  function generateAnomalyContent(anomaly){
+    const anomalyData = ANOMALY_TYPES[anomaly.typeName];
+    if(!anomalyData) return;
+    
+    const currentSystem = systems[current];
+    
+    // Clear existing entities in the pocket
+    currentSystem.npcs = currentSystem.npcs.filter(npc => !npc.inAnomaly);
+    currentSystem.asteroids = currentSystem.asteroids.filter(ast => !ast.inAnomaly);
+    
+    if(anomaly.category === 'combat'){
+      // Spawn NPCs
+      const npcCount = Math.floor(Math.random() * (anomalyData.npcs.count[1] - anomalyData.npcs.count[0] + 1)) + anomalyData.npcs.count[0];
+      for(let i = 0; i < npcCount; i++){
+        const npc = new NPC(
+          player.x + rand(1000, 3000) * (Math.random() > 0.5 ? 1 : -1),
+          player.y + rand(1000, 3000) * (Math.random() > 0.5 ? 1 : -1)
+        );
+        // Apply difficulty multiplier
+        npc.maxShield *= anomalyData.npcs.difficulty;
+        npc.shield = npc.maxShield;
+        npc.maxArmor *= anomalyData.npcs.difficulty;
+        npc.armor = npc.maxArmor;
+        npc.maxHull *= anomalyData.npcs.difficulty;
+        npc.hull = npc.maxHull;
+        npc.inAnomaly = true; // Mark as anomaly entity
+        npc.anomalyId = anomaly.id; // Track which anomaly this belongs to
+        currentSystem.npcs.push(npc);
+      }
+    } else if(anomaly.category === 'mining'){
+      // Spawn asteroids
+      const asteroidCount = 8 + Math.floor(Math.random() * 8); // 8-15 asteroids
+      const oreTypes = Object.keys(ORE_TYPES);
+      // Filter to higher-value ores for anomalies
+      const premiumOres = oreTypes.filter(ore => ORE_TYPES[ore].price > 50);
+      
+      for(let i = 0; i < asteroidCount; i++){
+        const oreType = premiumOres[Math.floor(Math.random() * premiumOres.length)];
+        const amount = Math.floor(rand(500, 1500));
+        const asteroid = new Asteroid(
+          player.x + rand(500, 2500) * (Math.random() > 0.5 ? 1 : -1),
+          player.y + rand(500, 2500) * (Math.random() > 0.5 ? 1 : -1),
+          amount,
+          oreType
+        );
+        asteroid.inAnomaly = true; // Mark as anomaly entity
+        asteroid.anomalyId = anomaly.id; // Track which anomaly this belongs to
+        currentSystem.asteroids.push(asteroid);
+      }
+    } else if(anomaly.category === 'data' || anomaly.category === 'relic'){
+      // Spawn container/hackable objects (for now, spawn some asteroids as placeholders)
+      // TODO: Implement actual containers and hacking minigame
+      const containerCount = 3 + Math.floor(Math.random() * 3); // 3-5 containers
+      for(let i = 0; i < containerCount; i++){
+        const asteroid = new Asteroid(
+          player.x + rand(800, 2000) * (Math.random() > 0.5 ? 1 : -1),
+          player.y + rand(800, 2000) * (Math.random() > 0.5 ? 1 : -1),
+          100,
+          'Veldspar' // Placeholder
+        );
+        asteroid.inAnomaly = true;
+        asteroid.anomalyId = anomaly.id; // Track which anomaly this belongs to
+        asteroid.isContainer = true; // Mark as container for future implementation
+        currentSystem.asteroids.push(asteroid);
+      }
+    }
+  }
+  
+  function clearAnomalyContent(){
+    const currentSystem = systems[current];
+    // Remove all anomaly entities
+    currentSystem.npcs = currentSystem.npcs.filter(npc => !npc.inAnomaly);
+    currentSystem.asteroids = currentSystem.asteroids.filter(ast => !ast.inAnomaly);
+  }
+  
+  function checkAnomalyCompletion(){
+    if(!player.inAnomaly || !player.currentAnomaly) return false;
+    
+    const currentSystem = systems[current];
+    const anomaly = player.currentAnomaly;
+    const anomalyData = ANOMALY_TYPES[anomaly.typeName];
+    
+    if(!anomalyData) return false;
+    
+    let completed = false;
+    
+    if(anomaly.category === 'combat'){
+      // Check if all anomaly NPCs are destroyed
+      const anomalyNPCs = currentSystem.npcs.filter(npc => npc.inAnomaly);
+      if(anomalyNPCs.length === 0){
+        completed = true;
+      }
+    } else if(anomaly.category === 'mining'){
+      // Check if all anomaly asteroids are depleted
+      const anomalyAsteroids = currentSystem.asteroids.filter(ast => ast.inAnomaly && ast.amount > 0);
+      if(anomalyAsteroids.length === 0){
+        completed = true;
+      }
+    } else if(anomaly.category === 'data' || anomaly.category === 'relic'){
+      // Check if all containers are looted (for now, just check if depleted)
+      const anomalyContainers = currentSystem.asteroids.filter(ast => ast.inAnomaly && ast.isContainer && ast.amount > 0);
+      if(anomalyContainers.length === 0){
+        completed = true;
+      }
+    }
+    
+    if(completed && !anomaly.rewardClaimed){
+      awardAnomalyRewards(anomaly, anomalyData);
+      anomaly.rewardClaimed = true;
+      return true;
+    }
+    
+    return completed;
+  }
+  
+  function awardAnomalyRewards(anomaly, anomalyData){
+    if(!anomalyData.rewards) return;
+    
+    const rewards = anomalyData.rewards;
+    
+    // ISK bounty
+    if(rewards.iskBounty){
+      const bounty = Math.floor(rand(rewards.iskBounty[0], rewards.iskBounty[1]));
+      player.credits += bounty;
+      console.log(`Anomaly completed! Earned ${bounty.toLocaleString()} ISK`);
+    }
+    
+    // Metal scrap
+    if(rewards.metalScrap){
+      const amount = Math.floor(rand(rewards.metalScrap[0], rewards.metalScrap[1]));
+      for(let i = 0; i < amount; i++){
+        const metalTypes = Object.keys(METAL_TYPES);
+        const randomMetal = metalTypes[Math.floor(Math.random() * metalTypes.length)];
+        addToInventory(player.cargoItems, {
+          type: 'metal',
+          metalType: randomMetal,
+          name: randomMetal,
+          size: 1
+        });
+      }
+    }
+    
+    // Ore
+    if(rewards.ore){
+      const amount = Math.floor(rand(rewards.ore[0], rewards.ore[1]));
+      for(let i = 0; i < amount; i++){
+        const oreTypes = Object.keys(ORE_TYPES);
+        const premiumOres = oreTypes.filter(ore => ORE_TYPES[ore].price > 50);
+        const randomOre = premiumOres[Math.floor(Math.random() * premiumOres.length)];
+        addToInventory(player.cargoItems, {
+          type: 'ore',
+          oreType: randomOre,
+          name: randomOre,
+          size: 1
+        });
+      }
+    }
+    
+    // Special loot (chance for blueprints/modules)
+    if(rewards.specialLoot && Math.random() < rewards.specialLoot){
+      // TODO: Implement special loot from ANOMALY_LOOT table
+      console.log('Special loot dropped!');
+    }
+    
+    updateUI();
   }
 
   // Inventory helper functions
@@ -2973,7 +3523,11 @@
     if(player.warpWarmup > 0){
       // Smoothly rotate towards warp destination during warmup at fixed rate
       if(player.warpTarget){
-        const targetAngle = Math.atan2(player.warpTarget.y - player.y, player.warpTarget.x - player.x) + Math.PI / 2;
+        // If in anomaly, calculate angle from backup position (where we'll exit to)
+        const fromX = player.inAnomaly && player.anomalyBackup ? player.anomalyBackup.x : player.x;
+        const fromY = player.inAnomaly && player.anomalyBackup ? player.anomalyBackup.y : player.y;
+        
+        const targetAngle = Math.atan2(player.warpTarget.y - fromY, player.warpTarget.x - fromX) + Math.PI / 2;
         
         // Calculate shortest angle difference
         let angleDiff = targetAngle - player.angle;
@@ -2991,6 +3545,10 @@
       
       player.warpWarmup -= dt;
       if(player.warpWarmup <= 0 && player.warpTarget){
+        // Exit anomaly if warping from inside one
+        if(player.inAnomaly){
+          exitAnomaly();
+        }
         player.isWarping = true;
         player.maxSpeed = player.warpSpeed;
         player.warpWarmup = 0;
@@ -3010,6 +3568,22 @@
         player.maxSpeed = player.sublightSpeed;
         player.vx = 0;
         player.vy = 0;
+        
+        // Check if arrived at an anomaly
+        if(!player.inAnomaly){
+          const currentSystem = systems[current];
+          const nearbyAnomaly = currentSystem.anomalies.find(a => {
+            const anomalyDist = Math.hypot(player.x - a.x, player.y - a.y);
+            return anomalyDist < 1000 && a.discovered; // Within 1000 units and discovered
+          });
+          
+          if(nearbyAnomaly){
+            console.log(`Arrived at anomaly ${nearbyAnomaly.name}, entering pocket...`);
+            enterAnomaly(nearbyAnomaly);
+          } else {
+            console.log(`Warp complete at (${player.x.toFixed(0)}, ${player.y.toFixed(0)}), no nearby anomaly found`);
+          }
+        }
       } else {
         player.vx = (dx/d) * player.warpSpeed;
         player.vy = (dy/d) * player.warpSpeed;
@@ -3093,14 +3667,38 @@
     
     // Bounds
     const s = systems[current];
-    player.x = clamp(player.x, 20, s.width - 20);
-    player.y = clamp(player.y, 20, s.height - 20);
+    if(!player.inAnomaly){
+      // Normal space boundaries
+      player.x = clamp(player.x, 20, s.width - 20);
+      player.y = clamp(player.y, 20, s.height - 20);
+    } else if(player.currentAnomaly && player.warpWarmup === 0 && !player.isWarping){
+      // Anomaly space: confine to 5000 radius circle from pocket center (but not when warping)
+      const centerX = player.currentAnomaly.pocketX;
+      const centerY = player.currentAnomaly.pocketY;
+      const dx = player.x - centerX;
+      const dy = player.y - centerY;
+      const distFromCenter = Math.hypot(dx, dy);
+      const maxRadius = 5000;
+      
+      if(distFromCenter > maxRadius){
+        // Clamp to circle edge
+        const angle = Math.atan2(dy, dx);
+        player.x = centerX + Math.cos(angle) * maxRadius;
+        player.y = centerY + Math.sin(angle) * maxRadius;
+        // Stop velocity when hitting boundary
+        player.vx = 0;
+        player.vy = 0;
+      }
+    }
     
     // Camera follows player
     camera.x = player.x - canvas.width/2;
     camera.y = player.y - canvas.height/2;
-    camera.x = clamp(camera.x, 0, s.width - canvas.width);
-    camera.y = clamp(camera.y, 0, s.height - canvas.height);
+    // Camera bounds (skip when in anomaly pocket)
+    if(!player.inAnomaly){
+      camera.x = clamp(camera.x, 0, s.width - canvas.width);
+      camera.y = clamp(camera.y, 0, s.height - canvas.height);
+    }
     
     // Auto-fire
     if(autoFire && selectedTarget && selectedTarget.type==='npc'){
@@ -3127,9 +3725,11 @@
       n.x += n.vx * dt;
       n.y += n.vy * dt;
       
-      // Bounds - keep NPCs within system boundaries
-      n.x = clamp(n.x, 20, s.width - 20);
-      n.y = clamp(n.y, 20, s.height - 20);
+      // Bounds - keep NPCs within system boundaries (skip for anomaly NPCs)
+      if(!n.inAnomaly){
+        n.x = clamp(n.x, 20, s.width - 20);
+        n.y = clamp(n.y, 20, s.height - 20);
+      }
       
       // Check if NPC is near any station (safe zone)
       const nearStationNPC = s.stations.some(st => dist(n, st) < 500);
@@ -3276,6 +3876,35 @@
           respawn.oreType
         ));
         s.asteroidRespawnQueue.splice(i, 1);
+      }
+    }
+    
+    // Process anomaly respawn queue
+    if(!s.anomalyRespawnQueue) s.anomalyRespawnQueue = [];
+    for(let i = s.anomalyRespawnQueue.length - 1; i >= 0; i--){
+      s.anomalyRespawnQueue[i].timer -= dt;
+      if(s.anomalyRespawnQueue[i].timer <= 0){
+        const respawn = s.anomalyRespawnQueue[i];
+        const anomalyData = ANOMALY_TYPES[respawn.typeName];
+        if(anomalyData){
+          // Respawn anomaly at same location
+          const discovered = !anomalyData.requiresScanning || Math.random() < 0.3;
+          s.anomalies.push({
+            id: Math.random().toString(36).substr(2, 9),
+            typeName: respawn.typeName,
+            type: anomalyData.type,
+            name: anomalyData.name,
+            category: anomalyData.type,
+            difficulty: anomalyData.difficulty,
+            discovered: discovered,
+            x: respawn.x,
+            y: respawn.y,
+            pocketX: respawn.pocketX,  // Use same pocket location
+            pocketY: respawn.pocketY,
+            rewardClaimed: false
+          });
+        }
+        s.anomalyRespawnQueue.splice(i, 1);
       }
     }
     
@@ -3574,9 +4203,10 @@
         
         // Buttons
         ty += 5;
-        const btn1 = {x: rightX + 10, y: ty, w: 70, h: 20, label: 'Warp To', action: initiateWarp};
-        drawButton(btn1);
-        canvasButtons.push(btn1);
+        const warpEnabled = canWarpToTarget();
+        const btn1 = {x: rightX + 10, y: ty, w: 70, h: 20, label: 'Warp To', action: initiateWarp, disabled: !warpEnabled};
+        drawButton(btn1, warpEnabled ? undefined : '#0f172a');
+        if(warpEnabled) canvasButtons.push(btn1);
         
         const btn2 = {x: rightX + 85, y: ty, w: 60, h: 20, label: 'Orbit', action: () => { 
           console.log('Orbit button clicked');
@@ -3603,9 +4233,10 @@
         ctx.fillText(`Ore: ${Math.round(a.amount)}/${a.maxAmount}`, rightX + 10, ty);
         
         ty += 20;
-        const btn1 = {x: rightX + 10, y: ty, w: 70, h: 20, label: 'Warp To', action: initiateWarp};
-        drawButton(btn1);
-        canvasButtons.push(btn1);
+        const warpEnabled = canWarpToTarget();
+        const btn1 = {x: rightX + 10, y: ty, w: 70, h: 20, label: 'Warp To', action: initiateWarp, disabled: !warpEnabled};
+        drawButton(btn1, warpEnabled ? undefined : '#0f172a');
+        if(warpEnabled) canvasButtons.push(btn1);
         
         const btn2 = {x: rightX + 85, y: ty, w: 80, h: 20, label: 'Approach', action: () => { player.targetCommand={type:'approach',dist:500}; }};
         drawButton(btn2);
@@ -3628,9 +4259,10 @@
         ctx.fillText(`To: ${systems[g.destSystem].name}`, rightX + 10, ty);
         
         ty += 20;
-        const btn1 = {x: rightX + 10, y: ty, w: 60, h: 20, label: 'Warp', action: initiateWarp};
-        drawButton(btn1);
-        canvasButtons.push(btn1);
+        const warpEnabled = canWarpToTarget();
+        const btn1 = {x: rightX + 10, y: ty, w: 60, h: 20, label: 'Warp', action: initiateWarp, disabled: !warpEnabled};
+        drawButton(btn1, warpEnabled ? undefined : '#0f172a');
+        if(warpEnabled) canvasButtons.push(btn1);
         
         const btn2 = {x: rightX + 75, y: ty, w: 80, h: 20, label: 'Approach', action: () => { player.targetCommand={type:'approach',dist:500}; }};
         drawButton(btn2);
@@ -3698,9 +4330,10 @@
         ctx.fillText('Safe Zone - Services', rightX + 10, ty);
         
         ty += 20;
-        const btn1 = {x: rightX + 10, y: ty, w: 60, h: 20, label: 'Warp', action: initiateWarp};
-        drawButton(btn1);
-        canvasButtons.push(btn1);
+        const warpEnabled = canWarpToTarget();
+        const btn1 = {x: rightX + 10, y: ty, w: 60, h: 20, label: 'Warp', action: initiateWarp, disabled: !warpEnabled};
+        drawButton(btn1, warpEnabled ? undefined : '#0f172a');
+        if(warpEnabled) canvasButtons.push(btn1);
         
         const btn2 = {x: rightX + 75, y: ty, w: 80, h: 20, label: 'Approach', action: () => { player.targetCommand={type:'approach',dist:500}; }};
         drawButton(btn2);
@@ -3749,23 +4382,44 @@
     // Build nearby list (only if not collapsed)
     if(!overviewCollapsed){
       const nearby = [];
-      s.stations.forEach(st=>{
-        const d = Math.round(dist(player, st));
-        nearby.push({type:'station', obj:st, dist:d, name:st.name});
-      });
-      s.stargates.forEach(g=>{
-        const d = Math.round(dist(player, g));
-        nearby.push({type:'gate', obj:g, dist:d, name:g.name});
-      });
+      
+      // Only show stations/gates if not in anomaly
+      if(!player.inAnomaly){
+        s.stations.forEach(st=>{
+          const d = Math.round(dist(player, st));
+          nearby.push({type:'station', obj:st, dist:d, name:st.name});
+        });
+        s.stargates.forEach(g=>{
+          const d = Math.round(dist(player, g));
+          nearby.push({type:'gate', obj:g, dist:d, name:g.name});
+        });
+      }
+      
+      // Filter asteroids/NPCs/wrecks by anomaly context
       s.asteroids.forEach(a=>{
+        // Skip if entity is in different anomaly than player
+        if(a.inAnomaly && (!player.inAnomaly || a.anomalyId !== player.currentAnomalyId)) return;
+        // Skip if player is in anomaly but entity is not
+        if(player.inAnomaly && !a.inAnomaly) return;
+        
         const d = Math.round(dist(player, a));
         nearby.push({type:'asteroid', obj:a, dist:d, name:`Asteroid (${a.oreType})`});
       });
       s.npcs.forEach(n=>{
+        // Skip if entity is in different anomaly than player
+        if(n.inAnomaly && (!player.inAnomaly || n.anomalyId !== player.currentAnomalyId)) return;
+        // Skip if player is in anomaly but entity is not
+        if(player.inAnomaly && !n.inAnomaly) return;
+        
         const d = Math.round(dist(player, n));
         nearby.push({type:'npc', obj:n, dist:d, name:n.type});
       });
       s.wrecks.forEach(w=>{
+        // Skip if entity is in different anomaly than player
+        if(w.inAnomaly && (!player.inAnomaly || w.anomalyId !== player.currentAnomalyId)) return;
+        // Skip if player is in anomaly but entity is not
+        if(player.inAnomaly && !w.inAnomaly) return;
+        
         const d = Math.round(dist(player, w));
         nearby.push({type:'wreck', obj:w, dist:d, name:w.name});
       });
@@ -3877,7 +4531,11 @@
     ctx.fillStyle = '#94a3b8';
     ctx.font = '11px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(`X: ${Math.round(player.x)} Y: ${Math.round(player.y)}`, 55, canvas.height - 10);
+    if(player.inAnomaly){
+      ctx.fillText('[ ANOMALY SPACE ]', 55, canvas.height - 10);
+    } else {
+      ctx.fillText(`X: ${Math.round(player.x)} Y: ${Math.round(player.y)}`, 55, canvas.height - 10);
+    }
     if(player.isWarping){
       ctx.textAlign = 'center';
       ctx.fillText('[ WARP DRIVE ACTIVE ]', canvas.width/2, 30);
@@ -3906,44 +4564,96 @@
     
     const s = systems[current];
     
-    // Draw nebulas (behind stars)
+    // Draw nebulas (behind stars) - tile across all space
     const time = Date.now() / 1000;
-    s.nebulas.forEach(nebula => {
-      // Only render nebulas visible in viewport (with margin for size)
-      if(nebula.x < camera.x - nebula.size || nebula.x > camera.x + canvas.width + nebula.size) return;
-      if(nebula.y < camera.y - nebula.size || nebula.y > camera.y + canvas.height + nebula.size) return;
-      
-      // Subtle pulsing effect
-      const pulse = Math.sin(time * 0.5 + nebula.drift) * 0.03 + 0.97;
-      const opacity = nebula.opacity * pulse;
-      
-      // Create radial gradient for nebula
-      const gradient = ctx.createRadialGradient(nebula.x, nebula.y, 0, nebula.x, nebula.y, nebula.size);
-      gradient.addColorStop(0, `rgba(${nebula.color.r}, ${nebula.color.g}, ${nebula.color.b}, ${opacity})`);
-      gradient.addColorStop(0.5, `rgba(${nebula.color.r}, ${nebula.color.g}, ${nebula.color.b}, ${opacity * 0.5})`);
-      gradient.addColorStop(1, `rgba(${nebula.color.r}, ${nebula.color.g}, ${nebula.color.b}, 0)`);
-      
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(nebula.x, nebula.y, nebula.size, 0, Math.PI * 2);
-      ctx.fill();
-    });
+    const tileSize = 20000; // Match the original system size for tiling
     
-    // Draw background stars
-    s.stars.forEach(star => {
-      // Only render stars visible in viewport (with some margin)
-      if(star.x < camera.x - 100 || star.x > camera.x + canvas.width + 100) return;
-      if(star.y < camera.y - 100 || star.y > camera.y + canvas.height + 100) return;
+    // Calculate which tiles are visible
+    const tileMinX = Math.floor((camera.x - 2000) / tileSize);
+    const tileMaxX = Math.floor((camera.x + canvas.width + 2000) / tileSize);
+    const tileMinY = Math.floor((camera.y - 2000) / tileSize);
+    const tileMaxY = Math.floor((camera.y + canvas.height + 2000) / tileSize);
+    
+    // Draw nebulas from each visible tile
+    for(let tileX = tileMinX; tileX <= tileMaxX; tileX++){
+      for(let tileY = tileMinY; tileY <= tileMaxY; tileY++){
+        const offsetX = tileX * tileSize;
+        const offsetY = tileY * tileSize;
+        
+        s.nebulas.forEach(nebula => {
+          const nebulaX = nebula.x + offsetX;
+          const nebulaY = nebula.y + offsetY;
+          
+          // Only render nebulas visible in viewport (with margin for size)
+          if(nebulaX < camera.x - nebula.size || nebulaX > camera.x + canvas.width + nebula.size) return;
+          if(nebulaY < camera.y - nebula.size || nebulaY > camera.y + canvas.height + nebula.size) return;
+          
+          // Subtle pulsing effect
+          const pulse = Math.sin(time * 0.5 + nebula.drift) * 0.03 + 0.97;
+          const opacity = nebula.opacity * pulse;
+          
+          // Create radial gradient for nebula
+          const gradient = ctx.createRadialGradient(nebulaX, nebulaY, 0, nebulaX, nebulaY, nebula.size);
+          gradient.addColorStop(0, `rgba(${nebula.color.r}, ${nebula.color.g}, ${nebula.color.b}, ${opacity})`);
+          gradient.addColorStop(0.5, `rgba(${nebula.color.r}, ${nebula.color.g}, ${nebula.color.b}, ${opacity * 0.5})`);
+          gradient.addColorStop(1, `rgba(${nebula.color.r}, ${nebula.color.g}, ${nebula.color.b}, 0)`);
+          
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(nebulaX, nebulaY, nebula.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+    }
+    
+    // Draw background stars - tile across all space
+    for(let tileX = tileMinX; tileX <= tileMaxX; tileX++){
+      for(let tileY = tileMinY; tileY <= tileMaxY; tileY++){
+        const offsetX = tileX * tileSize;
+        const offsetY = tileY * tileSize;
+        
+        s.stars.forEach(star => {
+          const starX = star.x + offsetX;
+          const starY = star.y + offsetY;
+          
+          // Only render stars visible in viewport (with some margin)
+          if(starX < camera.x - 100 || starX > camera.x + canvas.width + 100) return;
+          if(starY < camera.y - 100 || starY > camera.y + canvas.height + 100) return;
+          
+          // Subtle twinkling effect
+          const twinkle = Math.sin(time * 2 + star.twinkle) * 0.15 + 0.85;
+          const alpha = star.brightness * twinkle;
+          
+          ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(starX, starY, star.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+    }
+    
+    // Draw anomaly boundary circle (if in anomaly)
+    if(player.inAnomaly && player.currentAnomaly){
+      const centerX = player.currentAnomaly.pocketX;
+      const centerY = player.currentAnomaly.pocketY;
+      const radius = 5000;
       
-      // Subtle twinkling effect
-      const twinkle = Math.sin(time * 2 + star.twinkle) * 0.15 + 0.85;
-      const alpha = star.brightness * twinkle;
-      
-      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      // Draw boundary circle
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([20, 10]);
       ctx.beginPath();
-      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-      ctx.fill();
-    });
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Draw faint inner circle
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 50, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     
     // Draw grid (if enabled)
     if(showGrid){
@@ -3951,24 +4661,27 @@
       ctx.lineWidth = 1;
       const startX = Math.floor(camera.x/80)*80;
       const startY = Math.floor(camera.y/80)*80;
-      for(let x=startX; x<camera.x+canvas.width; x+=80){
+      const endX = camera.x + canvas.width;
+      const endY = camera.y + canvas.height;
+      for(let x=startX; x<endX; x+=80){
         ctx.beginPath();
-        ctx.moveTo(x,0);
-        ctx.lineTo(x,20000);
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
         ctx.stroke();
       }
-      for(let y=startY; y<camera.y+canvas.height; y+=80){
+      for(let y=startY; y<endY; y+=80){
         ctx.beginPath();
-        ctx.moveTo(0,y);
-        ctx.lineTo(20000,y);
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
         ctx.stroke();
       }
     }
     
-    // Stations
-    s.stations.forEach(st=>{
-      const baseColor = st.color || '#3b82f6';
-      const lighterColor = st.color ? st.color + 'cc' : '#60a5fa';
+    // Stations (skip if in anomaly)
+    if(!player.inAnomaly){
+      s.stations.forEach(st=>{
+        const baseColor = st.color || '#3b82f6';
+        const lighterColor = st.color ? st.color + 'cc' : '#60a5fa';
       
       ctx.shadowBlur = 20;
       ctx.shadowColor = baseColor;
@@ -4313,11 +5026,13 @@
         ctx.setLineDash([]);
       }
     });
+    } // End if(!player.inAnomaly)
     
-    // Stargates
-    s.stargates.forEach(g=>{
-      const time = Date.now() / 1000;
-      const gateColor = g.color || '#22d3ee';
+    // Stargates (skip if in anomaly)
+    if(!player.inAnomaly){
+      s.stargates.forEach(g=>{
+        const time = Date.now() / 1000;
+        const gateColor = g.color || '#22d3ee';
       // Parse hex color to RGB for alpha blending
       const r = parseInt(gateColor.slice(1,3), 16);
       const gR = parseInt(gateColor.slice(3,5), 16);
@@ -4436,6 +5151,7 @@
         ctx.shadowBlur = 0;
       }
     });
+    } // End if(!player.inAnomaly)
     
     // Asteroids
     s.asteroids.forEach(a=>{
@@ -5304,6 +6020,11 @@
     frameCount++;
     if(frameCount % 10 === 0){
       updateStats();
+      
+      // Check anomaly completion
+      if(player.inAnomaly){
+        checkAnomalyCompletion();
+      }
       
       // Check if station proximity changed
       const nearStation = systems[current].stations.find(st => dist(player, st) < 300);
