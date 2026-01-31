@@ -180,7 +180,10 @@
     <button id="autoFireBtn" class="circularBtn" style="left: calc(50% + 150px);" title="Toggle Auto-Fire">🎯<br>Fire</button>
     
     <!-- Auto Mine button (stacked on top of fire button) -->
-    <button id="autoMineBtn" class="circularBtn" style="left: calc(50% + 150px); bottom: 70px;" title="Toggle Auto-Mine">⛏️<br>Mine</button>
+    <button id="autoMineBtn" class="circularBtn" style="left: calc(50% + 150px); bottom: 70px;" title="Toggle Auto-Mine (M)">⛏️<br>Mine</button>
+    
+    <!-- Audio Control button (below system info in top left) -->
+    <button id="audioBtn" class="circularBtn" style="left: 10px; top: 80px;" title="Audio Controls (V)">🔊<br>Audio</button>
     
     <!-- Active Module Buttons Container (to the right of Fire/Mine buttons) -->
     <div id="moduleButtonsContainer" style="position: absolute; bottom: 10px; left: calc(50% + 220px); display: flex; flex-direction: column; gap: 5px; z-index: 50;"></div>
@@ -287,6 +290,40 @@
       <div style="text-align:center;font-size:11px;color:#64748b;margin-bottom:15px;">Drag to pan • Scroll to zoom</div>
       
       <div id="starMapContent"></div>
+    </div>
+    
+    <!-- Audio Control window -->
+    <div id="audioWindow" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,0.95);border:2px solid #475569;border-radius:8px;width:400px;padding:20px;z-index:100;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+      <button id="audioWindowClose" style="position:absolute;top:10px;right:10px;width:30px;height:30px;background:#dc2626;color:#fff;border:1px solid #991b1b;cursor:pointer;font-size:18px;padding:0;border-radius:4px;font-weight:bold;">×</button>
+      
+      <h2 style="margin:0 0 20px 0;color:#06b6d4;font-size:24px;text-align:center;">Audio Controls</h2>
+      
+      <div class="panel" style="margin:0;">
+        <div style="margin-bottom:20px;">
+          <label style="display:block;color:#f1f5f9;font-size:13px;margin-bottom:8px;font-weight:bold;">
+            Master Volume: <span id="masterVolumeLabel">100%</span>
+          </label>
+          <input type="range" id="masterVolumeSlider" min="0" max="100" value="100" style="width:100%;cursor:pointer;">
+        </div>
+        
+        <div style="margin-bottom:20px;">
+          <label style="display:block;color:#f1f5f9;font-size:13px;margin-bottom:8px;font-weight:bold;">
+            SFX Volume: <span id="sfxVolumeLabel">30%</span>
+          </label>
+          <input type="range" id="sfxVolumeSlider" min="0" max="100" value="30" style="width:100%;cursor:pointer;">
+        </div>
+        
+        <div style="margin-bottom:20px;">
+          <label style="display:block;color:#f1f5f9;font-size:13px;margin-bottom:8px;font-weight:bold;">
+            BGM Volume: <span id="bgmVolumeLabel">30%</span>
+          </label>
+          <input type="range" id="bgmVolumeSlider" min="0" max="100" value="30" style="width:100%;cursor:pointer;">
+        </div>
+        
+        <div style="text-align:center;margin-top:15px;">
+          <button id="muteAllBtn" style="padding:10px 20px;background:#dc2626;color:#fff;border:1px solid #991b1b;cursor:pointer;font-size:13px;border-radius:4px;font-weight:bold;">Mute All</button>
+        </div>
+      </div>
     </div>
   </div>
 

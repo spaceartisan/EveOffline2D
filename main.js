@@ -10,6 +10,249 @@
   const dist = (a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
 
+  // === Sound System ===
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const sounds = {
+    enabled: true,
+    masterVolume: 1.0,
+    sfxVolume: 0.3,
+    bgmVolume: 0.3,
+    
+    // Thrust sound (looping) - using HTML5 Audio
+    thrustAudio: null,
+    isThrustPlaying: false,
+    
+    // Initialize thrust audio
+    initThrustAudio() {
+      if(!this.thrustAudio) {
+        this.thrustAudio = new Audio('sfx/thrust.mp3');
+        this.thrustAudio.loop = true;
+      }
+    },
+    
+    playThrust() {
+      if(!this.enabled || this.isThrustPlaying) return;
+      
+      this.initThrustAudio();
+      this.thrustAudio.volume = this.sfxVolume * this.masterVolume;
+      this.thrustAudio.play().catch(e => console.log('Thrust audio play prevented:', e));
+      this.isThrustPlaying = true;
+    },
+    
+    stopThrust() {
+      if(!this.isThrustPlaying || !this.thrustAudio) return;
+      
+      this.thrustAudio.pause();
+      this.thrustAudio.currentTime = 0;
+      this.isThrustPlaying = false;
+    },
+    
+    playWeaponFire() {
+      if(!this.enabled) return;
+      
+      // Laser blast sound
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.value = 800;
+      osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1);
+      
+      gain.gain.value = this.sfxVolume * this.masterVolume * 0.15;
+      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.start();
+      osc.stop(audioContext.currentTime + 0.1);
+    },
+    
+    playExplosion() {
+      if(!this.enabled) return;
+      
+      // Explosion: noise burst + low boom
+      const bufferSize = audioContext.sampleRate * 0.5;
+      const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      
+      // Generate noise with decay
+      for(let i = 0; i < bufferSize; i++) {
+        const decay = 1 - (i / bufferSize);
+        data[i] = (Math.random() * 2 - 1) * decay;
+      }
+      
+      const noise = audioContext.createBufferSource();
+      noise.buffer = buffer;
+      
+      const noiseGain = audioContext.createGain();
+      noiseGain.gain.value = this.sfxVolume * this.masterVolume * 0.3;
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+      
+      // Low frequency boom
+      const boom = audioContext.createOscillator();
+      const boomGain = audioContext.createGain();
+      
+      boom.type = 'sine';
+      boom.frequency.value = 60;
+      boom.frequency.exponentialRampToValueAtTime(30, audioContext.currentTime + 0.3);
+      
+      boomGain.gain.value = this.sfxVolume * this.masterVolume * 0.4;
+      boomGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+      
+      noise.connect(noiseGain);
+      noiseGain.connect(audioContext.destination);
+      
+      boom.connect(boomGain);
+      boomGain.connect(audioContext.destination);
+      
+      noise.start();
+      boom.start();
+      
+      noise.stop(audioContext.currentTime + 0.5);
+      boom.stop(audioContext.currentTime + 0.5);
+    },
+    
+    playMiningLaser() {
+      if(!this.enabled) return;
+      
+      // Mining laser beam sound
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.type = 'square';
+      osc.frequency.value = 300;
+      
+      gain.gain.value = this.sfxVolume * this.masterVolume * 0.08;
+      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.start();
+      osc.stop(audioContext.currentTime + 0.2);
+    },
+    
+    playGateJump() {
+      if(!this.enabled) return;
+      
+      // Gate jump: whoosh + energy surge
+      const osc1 = audioContext.createOscillator();
+      const osc2 = audioContext.createOscillator();
+      const gain1 = audioContext.createGain();
+      const gain2 = audioContext.createGain();
+      
+      // Low frequency whoosh
+      osc1.type = 'sine';
+      osc1.frequency.value = 150;
+      osc1.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.8);
+      
+      gain1.gain.value = this.sfxVolume * this.masterVolume * 0.25;
+      gain1.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
+      
+      // High frequency energy surge
+      osc2.type = 'triangle';
+      osc2.frequency.value = 400;
+      osc2.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.4);
+      osc2.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.8);
+      
+      gain2.gain.value = this.sfxVolume * this.masterVolume * 0.15;
+      gain2.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
+      
+      osc1.connect(gain1);
+      gain1.connect(audioContext.destination);
+      
+      osc2.connect(gain2);
+      gain2.connect(audioContext.destination);
+      
+      osc1.start();
+      osc2.start();
+      
+      osc1.stop(audioContext.currentTime + 0.8);
+      osc2.stop(audioContext.currentTime + 0.8);
+    },
+    
+    playWarpEnter() {
+      if(!this.enabled) return;
+      
+      // Warp activation: rising pitch with echo effect
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.value = 100;
+      osc.frequency.exponentialRampToValueAtTime(2000, audioContext.currentTime + 1.5);
+      
+      gain.gain.value = this.sfxVolume * this.masterVolume * 0.2;
+      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.5);
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.start();
+      osc.stop(audioContext.currentTime + 1.5);
+    },
+    
+    playWarpExit() {
+      if(!this.enabled) return;
+      
+      // Warp deactivation: falling pitch
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.value = 2000;
+      osc.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.8);
+      
+      gain.gain.value = this.sfxVolume * this.masterVolume * 0.2;
+      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.start();
+      osc.stop(audioContext.currentTime + 0.8);
+    },
+    
+    // Gate warmup sound
+    gateWarmupNode: null,
+    gateWarmupGain: null,
+    isGateWarmupPlaying: false,
+    
+    playGateWarmup() {
+      if(!this.enabled || this.isGateWarmupPlaying) return;
+      
+      // Create building power-up sound
+      this.gateWarmupNode = audioContext.createOscillator();
+      this.gateWarmupGain = audioContext.createGain();
+      
+      this.gateWarmupNode.type = 'sawtooth';
+      this.gateWarmupNode.frequency.value = 60; // Start low
+      // Rise to higher pitch over 10 seconds
+      this.gateWarmupNode.frequency.exponentialRampToValueAtTime(180, audioContext.currentTime + 10);
+      
+      this.gateWarmupGain.gain.value = 0.001;
+      // Gradually increase volume
+      this.gateWarmupGain.gain.exponentialRampToValueAtTime(this.sfxVolume * this.masterVolume * 0.15, audioContext.currentTime + 10);
+      
+      this.gateWarmupNode.connect(this.gateWarmupGain);
+      this.gateWarmupGain.connect(audioContext.destination);
+      
+      this.gateWarmupNode.start();
+      this.isGateWarmupPlaying = true;
+    },
+    
+    stopGateWarmup() {
+      if(!this.isGateWarmupPlaying || !this.gateWarmupNode) return;
+      
+      this.gateWarmupGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+      this.gateWarmupNode.stop(audioContext.currentTime + 0.1);
+      this.isGateWarmupPlaying = false;
+      this.gateWarmupNode = null;
+      this.gateWarmupGain = null;
+    }
+  };
+
   // Game data - EVE-like ship with shields, armor, hull, capacitor
   class Ship{
     constructor(templateName = 'Velator'){ 
@@ -502,7 +745,7 @@
   let musicStarted = false;
   function startMusic(){
     if(!musicStarted){
-      bgm.volume = 0.3;
+      bgm.volume = sounds.bgmVolume * sounds.masterVolume;
       bgm.play().catch(e => console.log('Audio play prevented:', e));
       musicStarted = true;
     }
@@ -562,6 +805,12 @@
     if(e.key.toLowerCase() === 'p' && !e.repeat){
       e.preventDefault();
       toggleAnomalyWindow();
+    }
+    
+    // Toggle audio window with 'V' key
+    if(e.key.toLowerCase() === 'v' && !e.repeat){
+      e.preventDefault();
+      toggleAudioWindow();
     }
   });
   window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
@@ -651,6 +900,99 @@
     startMusic();
     toggleAutoMine();
   });
+  
+  // Audio Controls
+  const audioBtn = document.getElementById('audioBtn');
+  const audioWindow = document.getElementById('audioWindow');
+  const audioWindowClose = document.getElementById('audioWindowClose');
+  const masterVolumeSlider = document.getElementById('masterVolumeSlider');
+  const masterVolumeLabel = document.getElementById('masterVolumeLabel');
+  const sfxVolumeSlider = document.getElementById('sfxVolumeSlider');
+  const sfxVolumeLabel = document.getElementById('sfxVolumeLabel');
+  const bgmVolumeSlider = document.getElementById('bgmVolumeSlider');
+  const bgmVolumeLabel = document.getElementById('bgmVolumeLabel');
+  const muteAllBtn = document.getElementById('muteAllBtn');
+  let audioWindowOpen = false;
+  let wasMuted = false;
+  let previousMasterVolume = 1.0;
+  
+  audioBtn.addEventListener('click', () => {
+    startMusic();
+    toggleAudioWindow();
+  });
+  
+  audioWindowClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeAudioWindow();
+  });
+  
+  masterVolumeSlider.addEventListener('input', (e) => {
+    sounds.masterVolume = e.target.value / 100;
+    masterVolumeLabel.textContent = e.target.value + '%';
+    bgm.volume = sounds.bgmVolume * sounds.masterVolume;
+    if(sounds.thrustAudio && sounds.isThrustPlaying) {
+      sounds.thrustAudio.volume = sounds.sfxVolume * sounds.masterVolume;
+    }
+    if(sounds.masterVolume > 0 && wasMuted) {
+      wasMuted = false;
+      muteAllBtn.textContent = 'Mute All';
+    }
+  });
+  
+  sfxVolumeSlider.addEventListener('input', (e) => {
+    sounds.sfxVolume = e.target.value / 100;
+    sfxVolumeLabel.textContent = e.target.value + '%';
+    if(sounds.thrustAudio && sounds.isThrustPlaying) {
+      sounds.thrustAudio.volume = sounds.sfxVolume * sounds.masterVolume;
+    }
+  });
+  
+  bgmVolumeSlider.addEventListener('input', (e) => {
+    sounds.bgmVolume = e.target.value / 100;
+    bgmVolumeLabel.textContent = e.target.value + '%';
+    bgm.volume = sounds.bgmVolume * sounds.masterVolume;
+  });
+  
+  muteAllBtn.addEventListener('click', () => {
+    if(!wasMuted) {
+      previousMasterVolume = sounds.masterVolume;
+      sounds.masterVolume = 0;
+      masterVolumeSlider.value = 0;
+      masterVolumeLabel.textContent = '0%';
+      bgm.volume = 0;
+      muteAllBtn.textContent = 'Unmute';
+      muteAllBtn.style.background = '#10b981';
+      muteAllBtn.style.borderColor = '#059669';
+      wasMuted = true;
+    } else {
+      sounds.masterVolume = previousMasterVolume;
+      masterVolumeSlider.value = previousMasterVolume * 100;
+      masterVolumeLabel.textContent = Math.round(previousMasterVolume * 100) + '%';
+      bgm.volume = sounds.bgmVolume * sounds.masterVolume;
+      muteAllBtn.textContent = 'Mute All';
+      muteAllBtn.style.background = '#dc2626';
+      muteAllBtn.style.borderColor = '#991b1b';
+      wasMuted = false;
+    }
+  });
+  
+  function openAudioWindow(){
+    audioWindow.style.display = 'block';
+    audioWindowOpen = true;
+  }
+  
+  function closeAudioWindow(){
+    audioWindow.style.display = 'none';
+    audioWindowOpen = false;
+  }
+  
+  function toggleAudioWindow(){
+    if(audioWindowOpen){
+      closeAudioWindow();
+    } else {
+      openAudioWindow();
+    }
+  }
   
   // Anomaly window management
   const anomalyWindow = document.getElementById('anomalyWindow');
@@ -3412,6 +3754,9 @@
     // Update cargo display in real-time so player sees ore being collected
     updateCargoDisplay();
     
+    // Play mining laser sound
+    sounds.playMiningLaser();
+    
     // Create mining laser visual effects for each mining laser
     miningWeapons.forEach(weapon => {
       fireEffects.push({
@@ -3502,6 +3847,9 @@
     // Use fire rate of first weapon for cooldown
     player.fireCooldown = combatWeapons[0].fireRate;
     player.cap -= totalCapUse;
+    
+    // Play weapon fire sound
+    sounds.playWeaponFire();
   }
 
   // Game loop
@@ -3513,10 +3861,16 @@
       player.jumpWarmup -= dt;
       if(player.jumpWarmup <= 0 && player.jumpDestination !== null){
         player.jumpFlashTimer = 20; // Flash for ~0.33 seconds
+        // Stop warmup sound and play gate jump sound
+        sounds.stopGateWarmup();
+        sounds.playGateJump();
         jumpTo(player.jumpDestination, current);
         player.jumpDestination = null;
         player.jumpWarmup = 0;
       }
+    } else if(sounds.isGateWarmupPlaying) {
+      // If warmup was cancelled, stop the sound
+      sounds.stopGateWarmup();
     }
     
     // Warp warmup countdown
@@ -3549,6 +3903,8 @@
         if(player.inAnomaly){
           exitAnomaly();
         }
+        // Play warp enter sound
+        sounds.playWarpEnter();
         player.isWarping = true;
         player.maxSpeed = player.warpSpeed;
         player.warpWarmup = 0;
@@ -3562,6 +3918,8 @@
       const d = Math.hypot(dx, dy);
       
       if(d < 500){
+        // Play warp exit sound
+        sounds.playWarpExit();
         player.isWarping = false;
         player.warpTarget = null;
         player.warpCooldown = 600;
@@ -3645,6 +4003,7 @@
           // Check if we're auto-jumping to a gate
           if(player.autoJump && selectedTarget && selectedTarget.type === 'gate' && d < 200 && player.jumpWarmup === 0){
             player.jumpWarmup = 600;
+            sounds.playGateWarmup();
             player.targetCommand = null;
             player.isWarping = false;
             player.autoJump = false;
@@ -3660,6 +4019,14 @@
     if(spd > player.maxSpeed){
       player.vx = (player.vx / spd) * player.maxSpeed;
       player.vy = (player.vy / spd) * player.maxSpeed;
+    }
+    
+    // Thrust sound management - sync with thrust animation (when speed > 0.5)
+    const shouldPlayThrust = spd > 0.5 && !player.isWarping;
+    if(shouldPlayThrust && !sounds.isThrustPlaying) {
+      sounds.playThrust();
+    } else if(!shouldPlayThrust && sounds.isThrustPlaying) {
+      sounds.stopThrust();
     }
     
     player.x += player.vx * dt;
@@ -3780,6 +4147,9 @@
           weaponName: 'Pirate Turret'
         });
         
+        // Play enemy weapon fire sound
+        sounds.playWeaponFire();
+        
         if(hit){
           applyDamage(player, 12);
         }
@@ -3794,6 +4164,9 @@
     for(let i=s.npcs.length-1; i>=0; i--){
       const n = s.npcs[i];
       if(n.hull <= 0){
+        // Play explosion sound
+        sounds.playExplosion();
+        
         player.credits += 150;
         const killed = s.npcs.splice(i,1)[0];
         
@@ -3968,6 +4341,8 @@
     // Check if player died
     if(target === player && target.hull <= 0){
       target.hull = 0;
+      // Play explosion sound
+      sounds.playExplosion();
       handlePlayerDeath();
     }
   }
@@ -4276,6 +4651,7 @@
           } else if(d < 200 && player.jumpWarmup === 0){
             // Close enough - jump immediately
             player.jumpWarmup = 600;
+            sounds.playGateWarmup();
             player.jumpDestination = g.destSystem;
             player.targetCommand = null;
             player.isWarping = false;

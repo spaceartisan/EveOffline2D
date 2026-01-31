@@ -53,6 +53,15 @@ A vanilla JavaScript homage to EVE Online featuring true EVE-like mechanics:
 - Toggle-able grid overlay
 - Fullscreen support
 
+**Audio System**
+- **Thrust sounds** - Engine rumble when accelerating (W/S keys)
+- **Weapon fire** - Laser blast effects for combat
+- **Explosions** - Impact sounds when ships are destroyed
+- **Mining lasers** - Beam sound effects during ore extraction
+- **Gate jumps** - 10-second power-up sequence followed by jump whoosh
+- **Warp drive** - Rising pitch on warp activation, falling pitch on arrival
+- Procedurally generated placeholder sounds (replace with real audio files in sfx/ folder)
+
 **Ship Systems**
 - Momentum-based flight physics with inertia
 - Shield regeneration
