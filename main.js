@@ -50,206 +50,253 @@
     playWeaponFire() {
       if(!this.enabled) return;
       
-      // Laser blast sound
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.value = 800;
-      osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1);
-      
-      gain.gain.value = this.sfxVolume * this.masterVolume * 0.15;
-      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
-      
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      
-      osc.start();
-      osc.stop(audioContext.currentTime + 0.1);
+      // Try to load audio file, fallback to procedural if it doesn't exist
+      const audio = new Audio('sfx/weapon_fire.mp3');
+      audio.volume = this.sfxVolume * this.masterVolume;
+      audio.onerror = () => {
+        // Fallback: Laser blast sound (procedural)
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.value = 800;
+        osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1);
+        
+        gain.gain.value = this.sfxVolume * this.masterVolume * 0.15;
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start();
+        osc.stop(audioContext.currentTime + 0.1);
+      };
+      audio.play().catch(e => console.log('Weapon fire audio play prevented:', e));
     },
     
     playExplosion() {
       if(!this.enabled) return;
       
-      // Explosion: noise burst + low boom
-      const bufferSize = audioContext.sampleRate * 0.5;
-      const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-      const data = buffer.getChannelData(0);
-      
-      // Generate noise with decay
-      for(let i = 0; i < bufferSize; i++) {
-        const decay = 1 - (i / bufferSize);
-        data[i] = (Math.random() * 2 - 1) * decay;
-      }
-      
-      const noise = audioContext.createBufferSource();
-      noise.buffer = buffer;
-      
-      const noiseGain = audioContext.createGain();
-      noiseGain.gain.value = this.sfxVolume * this.masterVolume * 0.3;
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
-      
-      // Low frequency boom
-      const boom = audioContext.createOscillator();
-      const boomGain = audioContext.createGain();
-      
-      boom.type = 'sine';
-      boom.frequency.value = 60;
-      boom.frequency.exponentialRampToValueAtTime(30, audioContext.currentTime + 0.3);
-      
-      boomGain.gain.value = this.sfxVolume * this.masterVolume * 0.4;
-      boomGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
-      
-      noise.connect(noiseGain);
-      noiseGain.connect(audioContext.destination);
-      
-      boom.connect(boomGain);
-      boomGain.connect(audioContext.destination);
-      
-      noise.start();
-      boom.start();
-      
-      noise.stop(audioContext.currentTime + 0.5);
-      boom.stop(audioContext.currentTime + 0.5);
+      // Try to load audio file, fallback to procedural if it doesn't exist
+      const audio = new Audio('sfx/explosion.mp3');
+      audio.volume = this.sfxVolume * this.masterVolume;
+      audio.onerror = () => {
+        // Fallback: Explosion noise burst + low boom (procedural)
+        const bufferSize = audioContext.sampleRate * 0.5;
+        const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const data = buffer.getChannelData(0);
+        
+        for(let i = 0; i < bufferSize; i++) {
+          const decay = 1 - (i / bufferSize);
+          data[i] = (Math.random() * 2 - 1) * decay;
+        }
+        
+        const noise = audioContext.createBufferSource();
+        noise.buffer = buffer;
+        
+        const noiseGain = audioContext.createGain();
+        noiseGain.gain.value = this.sfxVolume * this.masterVolume * 0.3;
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+        
+        const boom = audioContext.createOscillator();
+        const boomGain = audioContext.createGain();
+        
+        boom.type = 'sine';
+        boom.frequency.value = 60;
+        boom.frequency.exponentialRampToValueAtTime(30, audioContext.currentTime + 0.3);
+        
+        boomGain.gain.value = this.sfxVolume * this.masterVolume * 0.4;
+        boomGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+        
+        noise.connect(noiseGain);
+        noiseGain.connect(audioContext.destination);
+        
+        boom.connect(boomGain);
+        boomGain.connect(audioContext.destination);
+        
+        noise.start();
+        boom.start();
+        
+        noise.stop(audioContext.currentTime + 0.5);
+        boom.stop(audioContext.currentTime + 0.5);
+      };
+      audio.play().catch(e => console.log('Explosion audio play prevented:', e));
     },
     
     playMiningLaser() {
       if(!this.enabled) return;
       
-      // Mining laser beam sound
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.type = 'square';
-      osc.frequency.value = 300;
-      
-      gain.gain.value = this.sfxVolume * this.masterVolume * 0.08;
-      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
-      
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      
-      osc.start();
-      osc.stop(audioContext.currentTime + 0.2);
+      // Try to load audio file, fallback to procedural if it doesn't exist
+      const audio = new Audio('sfx/mining.mp3');
+      audio.volume = this.sfxVolume * this.masterVolume;
+      audio.onerror = () => {
+        // Fallback: Mining laser beam sound (procedural)
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.type = 'square';
+        osc.frequency.value = 300;
+        
+        gain.gain.value = this.sfxVolume * this.masterVolume * 0.08;
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start();
+        osc.stop(audioContext.currentTime + 0.2);
+      };
+      audio.play().catch(e => console.log('Mining audio play prevented:', e));
     },
     
     playGateJump() {
       if(!this.enabled) return;
       
-      // Gate jump: whoosh + energy surge
-      const osc1 = audioContext.createOscillator();
-      const osc2 = audioContext.createOscillator();
-      const gain1 = audioContext.createGain();
-      const gain2 = audioContext.createGain();
-      
-      // Low frequency whoosh
-      osc1.type = 'sine';
-      osc1.frequency.value = 150;
-      osc1.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.8);
-      
-      gain1.gain.value = this.sfxVolume * this.masterVolume * 0.25;
-      gain1.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
-      
-      // High frequency energy surge
-      osc2.type = 'triangle';
-      osc2.frequency.value = 400;
-      osc2.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.4);
-      osc2.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.8);
-      
-      gain2.gain.value = this.sfxVolume * this.masterVolume * 0.15;
-      gain2.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
-      
-      osc1.connect(gain1);
-      gain1.connect(audioContext.destination);
-      
-      osc2.connect(gain2);
-      gain2.connect(audioContext.destination);
-      
-      osc1.start();
-      osc2.start();
-      
-      osc1.stop(audioContext.currentTime + 0.8);
-      osc2.stop(audioContext.currentTime + 0.8);
+      // Try to load audio file, fallback to procedural if it doesn't exist
+      const audio = new Audio('sfx/gate_jump.mp3');
+      audio.volume = this.sfxVolume * this.masterVolume;
+      audio.onerror = () => {
+        // Fallback: Gate jump whoosh + energy surge (procedural)
+        const osc1 = audioContext.createOscillator();
+        const osc2 = audioContext.createOscillator();
+        const gain1 = audioContext.createGain();
+        const gain2 = audioContext.createGain();
+        
+        osc1.type = 'sine';
+        osc1.frequency.value = 150;
+        osc1.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.8);
+        
+        gain1.gain.value = this.sfxVolume * this.masterVolume * 0.25;
+        gain1.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
+        
+        osc2.type = 'triangle';
+        osc2.frequency.value = 400;
+        osc2.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.4);
+        osc2.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.8);
+        
+        gain2.gain.value = this.sfxVolume * this.masterVolume * 0.15;
+        gain2.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
+        
+        osc1.connect(gain1);
+        gain1.connect(audioContext.destination);
+        
+        osc2.connect(gain2);
+        gain2.connect(audioContext.destination);
+        
+        osc1.start();
+        osc2.start();
+        
+        osc1.stop(audioContext.currentTime + 0.8);
+        osc2.stop(audioContext.currentTime + 0.8);
+      };
+      audio.play().catch(e => console.log('Gate jump audio play prevented:', e));
     },
     
     playWarpEnter() {
       if(!this.enabled) return;
       
-      // Warp activation: rising pitch with echo effect
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.value = 100;
-      osc.frequency.exponentialRampToValueAtTime(2000, audioContext.currentTime + 1.5);
-      
-      gain.gain.value = this.sfxVolume * this.masterVolume * 0.2;
-      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.5);
-      
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      
-      osc.start();
-      osc.stop(audioContext.currentTime + 1.5);
+      // Try to load audio file, fallback to procedural if it doesn't exist
+      const audio = new Audio('sfx/warp_enter.mp3');
+      audio.volume = this.sfxVolume * this.masterVolume;
+      audio.onerror = () => {
+        // Fallback: Warp activation rising pitch (procedural)
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.value = 100;
+        osc.frequency.exponentialRampToValueAtTime(2000, audioContext.currentTime + 1.5);
+        
+        gain.gain.value = this.sfxVolume * this.masterVolume * 0.2;
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.5);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start();
+        osc.stop(audioContext.currentTime + 1.5);
+      };
+      audio.play().catch(e => console.log('Warp enter audio play prevented:', e));
     },
     
     playWarpExit() {
       if(!this.enabled) return;
       
-      // Warp deactivation: falling pitch
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.value = 2000;
-      osc.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.8);
-      
-      gain.gain.value = this.sfxVolume * this.masterVolume * 0.2;
-      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
-      
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      
-      osc.start();
-      osc.stop(audioContext.currentTime + 0.8);
+      // Try to load audio file, fallback to procedural if it doesn't exist
+      const audio = new Audio('sfx/warp_exit.mp3');
+      audio.volume = this.sfxVolume * this.masterVolume;
+      audio.onerror = () => {
+        // Fallback: Warp deactivation falling pitch (procedural)
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.value = 2000;
+        osc.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.8);
+        
+        gain.gain.value = this.sfxVolume * this.masterVolume * 0.2;
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start();
+        osc.stop(audioContext.currentTime + 0.8);
+      };
+      audio.play().catch(e => console.log('Warp exit audio play prevented:', e));
     },
     
     // Gate warmup sound
-    gateWarmupNode: null,
-    gateWarmupGain: null,
+    gateWarmupAudio: null,
     isGateWarmupPlaying: false,
     
     playGateWarmup() {
       if(!this.enabled || this.isGateWarmupPlaying) return;
       
-      // Create building power-up sound
-      this.gateWarmupNode = audioContext.createOscillator();
-      this.gateWarmupGain = audioContext.createGain();
-      
-      this.gateWarmupNode.type = 'sawtooth';
-      this.gateWarmupNode.frequency.value = 60; // Start low
-      // Rise to higher pitch over 10 seconds
-      this.gateWarmupNode.frequency.exponentialRampToValueAtTime(180, audioContext.currentTime + 10);
-      
-      this.gateWarmupGain.gain.value = 0.001;
-      // Gradually increase volume
-      this.gateWarmupGain.gain.exponentialRampToValueAtTime(this.sfxVolume * this.masterVolume * 0.15, audioContext.currentTime + 10);
-      
-      this.gateWarmupNode.connect(this.gateWarmupGain);
-      this.gateWarmupGain.connect(audioContext.destination);
-      
-      this.gateWarmupNode.start();
+      // Try to load audio file, fallback to procedural if it doesn't exist
+      this.gateWarmupAudio = new Audio('sfx/gate_warmup.mp3');
+      this.gateWarmupAudio.volume = this.sfxVolume * this.masterVolume;
+      this.gateWarmupAudio.onerror = () => {
+        // Fallback: Building power-up sound (procedural)
+        const node = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        node.type = 'sawtooth';
+        node.frequency.value = 60;
+        node.frequency.exponentialRampToValueAtTime(180, audioContext.currentTime + 10);
+        
+        gain.gain.value = 0.001;
+        gain.gain.exponentialRampToValueAtTime(this.sfxVolume * this.masterVolume * 0.15, audioContext.currentTime + 10);
+        
+        node.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        node.start();
+        
+        // Store reference for stopping
+        this.gateWarmupAudio = { node, gain, stop: () => {
+          gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+          node.stop(audioContext.currentTime + 0.1);
+        }};
+      };
+      this.gateWarmupAudio.play().catch(e => console.log('Gate warmup audio play prevented:', e));
       this.isGateWarmupPlaying = true;
     },
     
     stopGateWarmup() {
-      if(!this.isGateWarmupPlaying || !this.gateWarmupNode) return;
+      if(!this.isGateWarmupPlaying || !this.gateWarmupAudio) return;
       
-      this.gateWarmupGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
-      this.gateWarmupNode.stop(audioContext.currentTime + 0.1);
+      if(this.gateWarmupAudio.pause) {
+        // HTML5 Audio
+        this.gateWarmupAudio.pause();
+        this.gateWarmupAudio.currentTime = 0;
+      } else if(this.gateWarmupAudio.stop) {
+        // Procedural fallback
+        this.gateWarmupAudio.stop();
+      }
+      
       this.isGateWarmupPlaying = false;
-      this.gateWarmupNode = null;
-      this.gateWarmupGain = null;
+      this.gateWarmupAudio = null;
     }
   };
 
@@ -384,17 +431,37 @@
   }
 
   class NPC{ 
-    constructor(x,y){
+    constructor(x,y,faction='pirate',shipClass='frigate'){
       this.x=x;this.y=y;
       this.vx=rand(-0.3,0.3);this.vy=rand(-0.3,0.3);
       this.angle=rand(0,Math.PI*2);
-      this.shield=50;this.maxShield=50;
-      this.armor=30;this.maxArmor=30;
-      this.hull=20;this.maxHull=20;
-      this.type='pirate';
+      this.faction=faction; // 'pirate' or 'police'
+      this.shipClass=shipClass; // 'frigate', 'cruiser', 'battlecruiser'
+      
+      // Stats based on ship class
+      if(shipClass === 'battlecruiser'){
+        // Match player battlecruiser stats (Ferox)
+        this.shield=900;this.maxShield=900;
+        this.armor=500;this.maxArmor=500;
+        this.hull=400;this.maxHull=400;
+        this.maxRange=850;
+      } else if(shipClass === 'cruiser'){
+        // Cruiser stats (between frigate and battlecruiser)
+        this.shield=400;this.maxShield=400;
+        this.armor=250;this.maxArmor=250;
+        this.hull=180;this.maxHull=180;
+        this.maxRange=650;
+      } else { // frigate
+        this.shield=50;this.maxShield=50;
+        this.armor=30;this.maxArmor=30;
+        this.hull=20;this.maxHull=20;
+        this.maxRange=500;
+      }
+      
+      this.type=faction === 'police' ? 'police' : 'pirate';
       this.fireCooldown=0;
-      this.maxRange=500;
       this.id=Math.random().toString(36).substr(2,9);
+      this.target=null; // For police to target pirates
     } 
   }
 
@@ -646,12 +713,31 @@
       ));
     }
     
-    // Add NPCs
+    // Add pirate NPCs
     for (let i = 0; i < npcCount; i++) {
       sys.npcs.push(new NPC(
         rand(3000, 17000),
-        rand(3000, 17000)
+        rand(3000, 17000),
+        'pirate',
+        'frigate'
       ));
+    }
+    
+    // Add police/navy NPCs in high-sec and low-sec only (not null-sec)
+    if(sec >= 0.1){
+      const policeCount = sec >= 0.5 ? Math.floor(Math.random() * 3) + 2 :  // High-sec: 2-4 police
+                          Math.floor(Math.random() * 2) + 1;                  // Low-sec: 1-2 police
+      const policeShipClasses = ['cruiser', 'cruiser', 'battlecruiser']; // Mostly cruisers, some battlecruisers
+      
+      for (let i = 0; i < policeCount; i++) {
+        const shipClass = policeShipClasses[Math.floor(Math.random() * policeShipClasses.length)];
+        sys.npcs.push(new NPC(
+          rand(3000, 17000),
+          rand(3000, 17000),
+          'police',
+          shipClass
+        ));
+      }
     }
     
     // Generate cosmic anomalies (max 4 for unique pocket locations)
@@ -697,15 +783,40 @@
 
   let current = 0;
   const player = new Ship('Velator'); // Start with basic frigate
+  player.hostility = 0; // Hostility level (0 = neutral, 100+ = hostile)
+  player.isHostile = false; // Flag for police to target
   const playerHangar = ['Velator']; // Track owned ships
   
-  // Give player a starting Miner I in cargo
-  const minerModule = getWeaponModule('Miner I');
-  addToInventory(player.cargoItems, {
-    ...minerModule,
-    type: 'weapon',
-    name: 'Miner I',
-    size: 0.1
+  // Helper function to create an inventory item from a weapon/module name
+  function createInventoryItem(itemName) {
+    // Try weapon first, then module
+    let itemData = getWeaponModule(itemName);
+    let itemType = 'weapon';
+    
+    if (!itemData) {
+      itemData = getSubsystemModule(itemName);
+      itemType = 'module';
+    }
+    
+    if (!itemData) return null;
+    
+    return {
+      // Include all properties needed for display and fitting
+      ...itemData,
+      type: itemType,
+      name: itemData.name,
+      size: itemData.cargoSize // Override the fitting 'size' with numeric cargoSize
+    };
+  }
+  
+  // Give player starting items in cargo
+  const startingItems = [
+    'Miner I'
+  ];
+  
+  startingItems.forEach(itemName => {
+    const item = createInventoryItem(itemName);
+    if (item) addToInventory(player.cargoItems, item);
   });
   
   let selectedTarget = null;
@@ -1111,6 +1222,11 @@
   let starMapDragStartX = 0;
   let starMapDragStartY = 0;
   
+  // Autopilot state
+  let autopilotActive = false;
+  let autopilotRoute = []; // Array of system indices
+  let autopilotDestination = null;
+  
   starMapClose.addEventListener('click', (e) => {
     e.stopPropagation();
     starMapWindow.style.display = 'none';
@@ -1182,6 +1298,30 @@
         starMapDragging = false;
         starMapCanvas.style.cursor = 'grab';
       });
+      
+      // Click handler for selecting destination
+      starMapCanvas.addEventListener('click', (e) => {
+        const rect = starMapCanvas.getBoundingClientRect();
+        const clickX = (e.clientX - rect.left - starMapPanX) / starMapZoom;
+        const clickY = (e.clientY - rect.top - starMapPanY) / starMapZoom;
+        
+        // Check if click is near any system
+        for(let i = 0; i < systems.length; i++){
+          const sys = systems[i];
+          const dx = clickX - sys.mapX;
+          const dy = clickY - sys.mapY;
+          const dist = Math.hypot(dx, dy);
+          
+          if(dist < 25){ // Click within system node
+            if(i === current){
+              console.log('Already in', sys.name);
+            } else {
+              startAutopilot(i);
+            }
+            return;
+          }
+        }
+      });
     }
     
     starMapContent.appendChild(starMapCanvas);
@@ -1217,6 +1357,22 @@
         ctx.stroke();
       });
     });
+    
+    // Draw autopilot route
+    if(autopilotActive && autopilotRoute.length > 1){
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([10, 5]);
+      for(let i = 0; i < autopilotRoute.length - 1; i++){
+        const fromSys = systems[autopilotRoute[i]];
+        const toSys = systems[autopilotRoute[i + 1]];
+        ctx.beginPath();
+        ctx.moveTo(fromSys.mapX, fromSys.mapY);
+        ctx.lineTo(toSys.mapX, toSys.mapY);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
     
     // Draw system nodes
     systems.forEach((sys, idx) => {
@@ -1290,11 +1446,41 @@
     `;
     infoContainer.appendChild(currentDiv);
     
+    // Autopilot status panel
+    if(autopilotActive){
+      const autopilotDiv = document.createElement('div');
+      autopilotDiv.style.cssText = 'padding:15px;background:rgba(6,182,212,0.2);border:2px solid #06b6d4;border-radius:6px;margin-bottom:10px;';
+      const routeText = autopilotRoute.map(i => systems[i].name).join(' → ');
+      const jumpsRemaining = autopilotRoute.length - 1;
+      autopilotDiv.innerHTML = `
+        <div style="font-size:14px;font-weight:bold;color:#06b6d4;margin-bottom:6px;">🛸 Autopilot Active</div>
+        <div style="font-size:14px;color:#f1f5f9;margin-bottom:4px;">Destination: ${systems[autopilotDestination].name}</div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Jumps remaining: ${jumpsRemaining}</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:10px;max-width:100%;overflow-x:auto;white-space:nowrap;">Route: ${routeText}</div>
+        <button id="stopAutopilotBtn" style="padding:8px 16px;background:#dc2626;color:#fff;border:1px solid #991b1b;cursor:pointer;font-size:12px;border-radius:4px;font-weight:bold;">Stop Autopilot</button>
+      `;
+      infoContainer.appendChild(autopilotDiv);
+      
+      // Add event listener for stop button after it's added to DOM
+      setTimeout(() => {
+        const stopBtn = document.getElementById('stopAutopilotBtn');
+        if(stopBtn){
+          stopBtn.addEventListener('click', stopAutopilot);
+        }
+      }, 0);
+    }
+    
     // All systems list
     const allSystemsHeader = document.createElement('div');
     allSystemsHeader.style.cssText = 'font-size:14px;font-weight:bold;color:#94a3b8;margin-bottom:8px;';
     allSystemsHeader.textContent = 'All Systems';
     infoContainer.appendChild(allSystemsHeader);
+    
+    // Autopilot instructions
+    const instructionsDiv = document.createElement('div');
+    instructionsDiv.style.cssText = 'padding:10px;background:rgba(100,116,139,0.15);border:1px solid #64748b;border-radius:4px;margin-bottom:10px;font-size:11px;color:#94a3b8;';
+    instructionsDiv.innerHTML = '💡 Click any system on the map to set autopilot destination';
+    infoContainer.appendChild(instructionsDiv);
     
     systems.forEach((sys, idx) => {
       const isCurrent = idx === current;
@@ -1334,6 +1520,103 @@
     starMapPanY = 0;
     updateStarMap();
     updateStarMapInfo();
+  }
+  
+  // Pathfinding: BFS to find shortest route between systems
+  function findRoute(fromIdx, toIdx){
+    if(fromIdx === toIdx) return [toIdx];
+    
+    const queue = [[fromIdx]];
+    const visited = new Set([fromIdx]);
+    
+    while(queue.length > 0){
+      const path = queue.shift();
+      const current = path[path.length - 1];
+      
+      for(const nextIdx of systems[current].gates){
+        if(nextIdx === toIdx){
+          return [...path, nextIdx];
+        }
+        
+        if(!visited.has(nextIdx)){
+          visited.add(nextIdx);
+          queue.push([...path, nextIdx]);
+        }
+      }
+    }
+    
+    return null; // No route found
+  }
+  
+  // Start autopilot to destination
+  function startAutopilot(destinationIdx){
+    if(destinationIdx === current){
+      console.log('Already at destination');
+      return;
+    }
+    
+    const route = findRoute(current, destinationIdx);
+    if(!route){
+      console.log('No route found to', systems[destinationIdx].name);
+      return;
+    }
+    
+    autopilotRoute = route;
+    autopilotDestination = destinationIdx;
+    autopilotActive = true;
+    console.log('Autopilot engaged. Route:', route.map(i => systems[i].name).join(' → '));
+    console.log('Route indices:', route);
+    console.log('Current system index:', current);
+    console.log('Route length:', autopilotRoute.length);
+    
+    // Start navigation to first gate
+    if(autopilotRoute.length > 1){
+      const nextSystemIdx = autopilotRoute[1]; // Next system after current
+      console.log('Looking for gate to system index:', nextSystemIdx, systems[nextSystemIdx].name);
+      console.log('Current system has', systems[current].stargates.length, 'gates');
+      systems[current].stargates.forEach((g, i) => {
+        console.log('  Gate', i, '- destSystem:', g.destSystem, '(type:', typeof g.destSystem, ')');
+      });
+      
+      const nextGate = systems[current].stargates.find(g => g.destSystem === nextSystemIdx);
+      console.log('Found gate:', nextGate ? 'YES' : 'NO');
+      
+      if(nextGate){
+        // Clear any existing warp/jump state
+        player.warpWarmup = 0;
+        player.warpCooldown = 0;
+        player.jumpWarmup = 0;
+        player.isWarping = false;
+        player.warpTarget = null;
+        
+        selectedTarget = {type: 'gate', ref: nextGate};
+        
+        // Initiate warp to the gate
+        player.warpWarmup = 180; // 3 second warp warmup
+        player.warpTarget = {x: nextGate.x, y: nextGate.y};
+        player.jumpDestination = nextSystemIdx;
+        player.autoJump = true;
+        // After warp, we'll approach the gate to trigger the jump
+        player.targetCommand = {type: 'approach', dist: 0};
+        
+        console.log('Autopilot: Warping to gate to', systems[nextSystemIdx].name);
+        console.log('Player position:', player.x, player.y);
+        console.log('Gate position:', nextGate.x, nextGate.y);
+      }
+    }
+    
+    updateStarMapInfo(); // Refresh UI to show route
+  }
+  
+  // Stop autopilot
+  function stopAutopilot(){
+    autopilotActive = false;
+    autopilotRoute = [];
+    autopilotDestination = null;
+    player.targetCommand = null;
+    player.autoJump = false;
+    updateStarMapInfo(); // Refresh UI
+    console.log('Autopilot disengaged');
   }
   
   // Helper function to get security status color
@@ -2687,7 +2970,8 @@
           if(player.credits >= weapon.price){
             player.credits -= weapon.price;
             // Add to station inventory
-            addToInventory(nearStation.inventory, {...weapon, type: 'weapon', size: 0.1});
+            const item = createInventoryItem(weapon.name);
+            if(item) addToInventory(nearStation.inventory, item);
             updateUI();
           }
         };
@@ -2782,7 +3066,8 @@
             if(player.credits >= module.price){
               player.credits -= module.price;
               // Add to station inventory
-              addToInventory(nearStation.inventory, {...module, type: 'module', size: 0.1});
+              const item = createInventoryItem(module.name);
+              if(item) addToInventory(nearStation.inventory, item);
               updateUI();
             }
           };
@@ -3803,10 +4088,15 @@
       if(mod && mod.damageBonus) damageBonus += mod.damageBonus;
     });
     
+    // Track if any weapon actually fired
+    let weaponsFired = false;
+    
     // Fire each combat weapon
     combatWeapons.forEach(weapon => {
       // Don't fire if beyond max range
       if(distance > weapon.maxRange) return;
+      
+      weaponsFired = true; // At least one weapon is in range
       
       // Calculate accuracy based on range
       let accuracy;
@@ -3840,16 +4130,19 @@
       
       if(hit){
         // Apply damage to target with damage bonuses
-        applyDamage(target, weapon.damage * damageBonus);
+        applyDamage(target, weapon.damage * damageBonus, player);
       }
     });
     
-    // Use fire rate of first weapon for cooldown
-    player.fireCooldown = combatWeapons[0].fireRate;
-    player.cap -= totalCapUse;
-    
-    // Play weapon fire sound
-    sounds.playWeaponFire();
+    // Only play sound and consume resources if weapons actually fired
+    if(weaponsFired){
+      // Use fire rate of first weapon for cooldown
+      player.fireCooldown = combatWeapons[0].fireRate;
+      player.cap -= totalCapUse;
+      
+      // Play weapon fire sound
+      sounds.playWeaponFire();
+    }
   }
 
   // Game loop
@@ -3867,6 +4160,48 @@
         jumpTo(player.jumpDestination, current);
         player.jumpDestination = null;
         player.jumpWarmup = 0;
+        
+        // Autopilot: Continue to next system if active
+        if(autopilotActive && autopilotRoute.length > 0){
+          // Remove current system from route (we just arrived here)
+          const currentIdx = autopilotRoute.findIndex(idx => idx === current);
+          if(currentIdx >= 0){
+            autopilotRoute = autopilotRoute.slice(currentIdx + 1);
+          }
+          
+          // If there are more systems in route, navigate to next gate
+          if(autopilotRoute.length > 0){
+            const nextSystemIdx = autopilotRoute[0];
+            console.log('Autopilot: Navigating to', systems[nextSystemIdx].name);
+            
+            // Find the gate to the next system
+            const nextGate = systems[current].stargates.find(g => g.destSystem === nextSystemIdx);
+            if(nextGate){
+              // Clear any warp/jump state
+              player.warpWarmup = 0;
+              player.warpCooldown = 0;
+              player.isWarping = false;
+              player.warpTarget = null;
+              
+              selectedTarget = {type: 'gate', ref: nextGate};
+              
+              // Initiate warp to the gate
+              player.warpWarmup = 180;
+              player.warpTarget = {x: nextGate.x, y: nextGate.y};
+              player.jumpDestination = nextSystemIdx;
+              player.autoJump = true;
+              // After warp, we'll approach the gate to trigger the jump
+              player.targetCommand = {type: 'approach', dist: 0};
+              
+              console.log('Autopilot: Warping to next gate at', nextGate.x, nextGate.y);
+            }
+            updateStarMapInfo(); // Update UI with new jump count
+          } else {
+            // Reached destination
+            console.log('Autopilot: Arrived at destination', systems[autopilotDestination].name);
+            stopAutopilot();
+          }
+        }
       }
     } else if(sounds.isGateWarmupPlaying) {
       // If warmup was cancelled, stop the sound
@@ -3995,19 +4330,18 @@
         player.vy += (dx/d) * player.accel * 0.6 * dt;
       } else if(player.targetCommand.type === 'approach'){
         const targetDist = player.targetCommand.dist;
-        if(d > targetDist){
+        
+        // Check if we're auto-jumping to a gate (check while approaching, not just at target)
+        if(player.autoJump && selectedTarget && selectedTarget.type === 'gate' && d < 200 && player.jumpWarmup === 0){
+          console.log('Triggering jump! Distance:', d);
+          player.jumpWarmup = 600;
+          sounds.playGateWarmup();
+          player.targetCommand = null;
+          player.isWarping = false;
+          player.autoJump = false;
+        } else if(d > targetDist){
           player.vx += (dx/d) * player.accel * dt;
           player.vy += (dy/d) * player.accel * dt;
-        } else {
-          // Reached approach distance
-          // Check if we're auto-jumping to a gate
-          if(player.autoJump && selectedTarget && selectedTarget.type === 'gate' && d < 200 && player.jumpWarmup === 0){
-            player.jumpWarmup = 600;
-            sounds.playGateWarmup();
-            player.targetCommand = null;
-            player.isWarping = false;
-            player.autoJump = false;
-          }
         }
       }
     }
@@ -4084,6 +4418,14 @@
     player.shield = Math.min(player.maxShield, player.shield + player.shieldRegen * dt * 0.1);
     player.cap = Math.min(player.maxCap, player.cap + player.capRegen * dt * 0.1);
     
+    // Hostility decay over time (decrease by ~1 point per second at 60fps, takes ~2 minutes to go from 100 to 0)
+    if(player.hostility > 0){
+      player.hostility = Math.max(0, player.hostility - (dt / 60.0));
+      if(player.hostility < 100){
+        player.isHostile = false;
+      }
+    }
+    
     // Process active modules
     processActiveModules(dt);
 
@@ -4091,6 +4433,14 @@
     s.npcs.forEach(n=>{
       n.x += n.vx * dt;
       n.y += n.vy * dt;
+      
+      // Update rotation to face direction of movement
+      const speed = Math.hypot(n.vx, n.vy);
+      if(speed > 0.1){
+        // Add 90 degrees (PI/2) because ship designs are drawn pointing up (along -Y axis)
+        // but atan2 gives angle along X axis
+        n.angle = Math.atan2(n.vy, n.vx) + Math.PI / 2;
+      }
       
       // Bounds - keep NPCs within system boundaries (skip for anomaly NPCs)
       if(!n.inAnomaly){
@@ -4102,59 +4452,143 @@
       const nearStationNPC = s.stations.some(st => dist(n, st) < 500);
       const nearStationPlayer = s.stations.some(st => dist(player, st) < 500);
       
-      const dPlayer = dist(n, player);
-      if(dPlayer < 250 && !nearStationNPC){
-        const ang = Math.atan2(player.y - n.y, player.x - n.x);
-        n.vx += Math.cos(ang) * 0.015 * dt;
-        n.vy += Math.sin(ang) * 0.015 * dt;
+      // Police AI: Target and attack pirates (or hostile players)
+      if(n.faction === 'police'){
+        // Find nearest target if no target or target is dead
+        if(!n.target || n.target.hull <= 0){
+          let nearestTarget = null;
+          let nearestDist = Infinity;
+          
+          // Check if player is hostile and within range
+          if(player.isHostile){
+            const dPlayer = dist(n, player);
+            if(dPlayer < 1000){
+              nearestTarget = player;
+              nearestDist = dPlayer;
+            }
+          }
+          
+          // Also check for pirates (unless already targeting hostile player)
+          if(!nearestTarget){
+            s.npcs.forEach(other => {
+              if(other.faction === 'pirate' && other.hull > 0){
+                const d = dist(n, other);
+                if(d < nearestDist && d < 1000){ // Only target within 1000m
+                  nearestDist = d;
+                  nearestTarget = other;
+                }
+              }
+            });
+          }
+          
+          n.target = nearestTarget;
+        }
+        
+        // If has target, pursue and attack
+        if(n.target && n.target.hull > 0){
+          const dTarget = dist(n, n.target);
+          
+          // Check safe zones for both police and target
+          const nearStationPolice = s.stations.some(st => dist(n, st) < 500);
+          const nearStationTarget = s.stations.some(st => dist(n.target, st) < 500);
+          
+          // Pursue target if within 1000m and not in safe zone
+          if(dTarget < 1000 && !nearStationPolice){
+            const ang = Math.atan2(n.target.y - n.y, n.target.x - n.x);
+            n.vx += Math.cos(ang) * 0.02 * dt;
+            n.vy += Math.sin(ang) * 0.02 * dt;
+          }
+          
+          // Fire at target (pirate or hostile player) - not if either is in safe zone
+          n.fireCooldown = (n.fireCooldown || 0) - dt;
+          if(dTarget <= n.maxRange && n.fireCooldown <= 0 && !nearStationPolice && !nearStationTarget){
+            const accuracy = dTarget <= n.maxRange * 0.65 ? 0.95 : 0.75;
+            const hit = Math.random() < accuracy;
+            
+            fireEffects.push({
+              x1: n.x,
+              y1: n.y,
+              x2: n.target.x,
+              y2: n.target.y,
+              life: 12,
+              maxLife: 12,
+              hit: hit,
+              owner: 'police',
+              weaponType: 'turret',
+              weaponName: 'Police Turret'
+            });
+            
+            if(hit){
+              const damage = n.shipClass === 'battlecruiser' ? 50 : (n.shipClass === 'cruiser' ? 35 : 18);
+              applyDamage(n.target, damage, n);
+            }
+            
+            // Play weapon sound if targeting player and within hearing range
+            if(n.target === player && dist(n, player) < 1100){
+              sounds.playWeaponFire();
+            }
+            
+            n.fireCooldown = 35;
+          }
+        }
+      } else { // Pirate AI: Attack player
+        const dPlayer = dist(n, player);
+        // Pursue player if within 1000m and not in safe zone
+        if(dPlayer < 1000 && !nearStationNPC && !nearStationPlayer){
+          const ang = Math.atan2(player.y - n.y, player.x - n.x);
+          n.vx += Math.cos(ang) * 0.015 * dt;
+          n.vy += Math.sin(ang) * 0.015 * dt;
+        }
+        
+        n.fireCooldown = (n.fireCooldown || 0) - dt;
+        if(dPlayer <= n.maxRange && n.fireCooldown <= 0 && !nearStationNPC && !nearStationPlayer){
+          // Calculate accuracy based on range
+          let accuracy;
+          const range65 = n.maxRange * 0.65;
+          const range85 = n.maxRange * 0.85;
+          
+          if(dPlayer <= range65){
+            accuracy = 0.90;
+          } else if(dPlayer <= range85){
+            accuracy = 0.70;
+          } else {
+            accuracy = 0.35;
+          }
+          
+          // Roll for hit
+          const hit = Math.random() < accuracy;
+          
+          // Create visual firing effect
+          fireEffects.push({
+            x1: n.x,
+            y1: n.y,
+            x2: player.x,
+            y2: player.y,
+            life: 12,
+            maxLife: 12,
+            hit: hit,
+            owner: 'npc',
+            weaponType: 'turret',
+            weaponName: 'Pirate Turret'
+          });
+          
+          // Play enemy weapon fire sound if within hearing range
+          if(dist(n, player) < 1100){
+            sounds.playWeaponFire();
+          }
+          
+          if(hit){
+            applyDamage(player, 12);
+          }
+          
+          n.fireCooldown = 40;
+        }
       }
       
       const nSpd = Math.hypot(n.vx, n.vy);
       if(nSpd > 2){
         n.vx = (n.vx / nSpd) * 2;
         n.vy = (n.vy / nSpd) * 2;
-      }
-      
-      n.fireCooldown = (n.fireCooldown || 0) - dt;
-      if(dPlayer <= n.maxRange && n.fireCooldown <= 0 && !nearStationNPC && !nearStationPlayer){
-        // Calculate accuracy based on range
-        let accuracy;
-        const range65 = n.maxRange * 0.65;
-        const range85 = n.maxRange * 0.85;
-        
-        if(dPlayer <= range65){
-          accuracy = 0.90;
-        } else if(dPlayer <= range85){
-          accuracy = 0.70;
-        } else {
-          accuracy = 0.35;
-        }
-        
-        // Roll for hit
-        const hit = Math.random() < accuracy;
-        
-        // Create visual firing effect
-        fireEffects.push({
-          x1: n.x,
-          y1: n.y,
-          x2: player.x,
-          y2: player.y,
-          life: 12,
-          maxLife: 12,
-          hit: hit,
-          owner: 'npc',
-          weaponType: 'turret',
-          weaponName: 'Pirate Turret'
-        });
-        
-        // Play enemy weapon fire sound
-        sounds.playWeaponFire();
-        
-        if(hit){
-          applyDamage(player, 12);
-        }
-        
-        n.fireCooldown = 40;
       }
       
       n.shield = Math.min(n.maxShield, n.shield + 0.3 * dt * 0.1);
@@ -4164,14 +4598,21 @@
     for(let i=s.npcs.length-1; i>=0; i--){
       const n = s.npcs[i];
       if(n.hull <= 0){
-        // Play explosion sound
-        sounds.playExplosion();
+        // Play explosion sound if within hearing range
+        if(dist(n, player) < 1100){
+          sounds.playExplosion();
+        }
         
-        player.credits += 150;
+        // Only give bounty for pirate kills, not police
+        if(n.faction === 'pirate'){
+          player.credits += 150;
+        }
+        
         const killed = s.npcs.splice(i,1)[0];
         
-        // Create wreck with loot
-        const wreck = new Wreck(killed.x, killed.y, 'Pirate Wreckage');
+        // Create wreck with loot (name based on faction)
+        const wreckName = killed.faction === 'police' ? 'Police Wreckage' : 'Pirate Wreckage';
+        const wreck = new Wreck(killed.x, killed.y, wreckName);
         
         // Add random ore to wreck cargo (3-8 units)
         const oreTypes = ['Veldspar', 'Scordite', 'Pyroxeres', 'Plagioclase'];
@@ -4182,21 +4623,29 @@
           wreck.cargo.push({type: 'ore', name: oreType, size: oreData.size, oreType: oreType});
         }
         
-        // Add metal scraps based on ship class (frigates drop fewer, bigger ships more)
-        const metalType = getMetalTypeForShip('frigate'); // NPCs are frigates for now
-        const metalAmount = getMetalAmount('frigate');
+        // Add metal scraps based on ship class
+        const metalType = getMetalTypeForShip(killed.shipClass || 'frigate');
+        const metalAmount = getMetalAmount(killed.shipClass || 'frigate');
         const metalData = METAL_TYPES[metalType];
         for(let j = 0; j < metalAmount; j++){
           wreck.cargo.push({type: 'metal', name: metalType, size: metalData.size, metalType: metalType});
         }
         
+        // Add weapons and modules based on ship class and faction
+        const lootItems = generateLoot(killed.shipClass || 'frigate', killed.faction || 'pirate');
+        for(const item of lootItems){
+          wreck.cargo.push(item);
+        }
+        
         s.wrecks.push(wreck);
         
-        // Schedule NPC respawn after 1 minute
+        // Schedule NPC respawn after 1 minute with original faction and ship class
         if(!s.npcRespawnQueue) s.npcRespawnQueue = [];
         s.npcRespawnQueue.push({
           timer: 3600, // 60 seconds * 60 ticks
-          systemIndex: current
+          systemIndex: current,
+          faction: killed.faction,
+          shipClass: killed.shipClass
         });
         
         if(selectedTarget && selectedTarget.type==='npc' && selectedTarget.ref === killed){
@@ -4211,10 +4660,13 @@
     for(let i = s.npcRespawnQueue.length - 1; i >= 0; i--){
       s.npcRespawnQueue[i].timer -= dt;
       if(s.npcRespawnQueue[i].timer <= 0){
-        // Respawn NPC at random location
+        const respawnData = s.npcRespawnQueue[i];
+        // Respawn NPC at random location with original faction and ship class
         s.npcs.push(new NPC(
           rand(3000, s.width - 3000),
-          rand(3000, s.height - 3000)
+          rand(3000, s.height - 3000),
+          respawnData.faction || 'pirate',
+          respawnData.shipClass || 'frigate'
         ));
         s.npcRespawnQueue.splice(i, 1);
       }
@@ -4317,7 +4769,15 @@
     }
   }
   
-  function applyDamage(target, dmg){
+  function applyDamage(target, dmg, attacker = null){
+    // Check if player is attacking police - increase hostility
+    if(attacker === player && target.faction === 'police'){
+      player.hostility = Math.min(300, player.hostility + 50); // Cap at 300 (5 minutes to decay)
+      if(player.hostility >= 100){
+        player.isHostile = true;
+      }
+    }
+    
     if(target.shield > 0){
       target.shield -= dmg;
       if(target.shield < 0){
@@ -4348,32 +4808,78 @@
   }
   
   function handlePlayerDeath(){
+    // Player loses their current ship completely with all fitted modules and cargo
+    const currentShipName = player.shipName;
+    const lostCredits = Math.floor(player.credits * 0.1); // Lose 10% of credits
+    const savedCredits = player.credits; // Save credits before respawn
+    const savedHostility = player.hostility; // Save hostility level
+    const savedIsHostile = player.isHostile; // Save hostile flag
+    
+    // Remove destroyed ship from hangar if it exists there
+    const destroyedShipIndex = playerHangar.indexOf(currentShipName);
+    if(destroyedShipIndex !== -1){
+      playerHangar.splice(destroyedShipIndex, 1);
+    }
+    
     // Respawn at nearest station with penalties
     const s = systems[current];
     const nearestStation = s.stations[0]; // Use first station
     
-    if(nearestStation){
-      player.x = nearestStation.x + 100;
-      player.y = nearestStation.y;
-      player.vx = 0;
-      player.vy = 0;
-      player.isWarping = false;
-      player.warpWarmup = 0;
-      player.warpTarget = null;
+    // Check if player has any ships left in hangar
+    if(playerHangar.length > 0){
+      // Respawn in first available ship from hangar
+      const respawnShip = playerHangar[0];
+      
+      // Create new ship instance (this resets everything)
+      const newShip = new Ship(respawnShip);
+      
+      // Copy over persistent properties
+      newShip.credits = savedCredits - lostCredits;
+      newShip.hostility = savedHostility;
+      newShip.isHostile = savedIsHostile;
+      
+      // Position at station
+      if(nearestStation){
+        newShip.x = nearestStation.x + 100;
+        newShip.y = nearestStation.y;
+      }
+      
+      // Replace player object with new ship
+      Object.assign(player, newShip);
+      
+      // Remove this ship from hangar
+      playerHangar.shift();
+      
+      console.log(`Ship destroyed! Respawned in ${respawnShip} from hangar. Lost ${currentShipName}, all cargo, modules, and ${lostCredits} credits.`);
+    } else {
+      // No ships left - give them a free corvette (Ibis)
+      const newShip = new Ship('Ibis');
+      
+      // Copy over persistent properties
+      newShip.credits = Math.max(0, savedCredits - lostCredits);
+      newShip.hostility = savedHostility;
+      newShip.isHostile = savedIsHostile;
+      
+      // Position at station
+      if(nearestStation){
+        newShip.x = nearestStation.x + 100;
+        newShip.y = nearestStation.y;
+      }
+      
+      // Replace player object with new ship
+      Object.assign(player, newShip);
+      
+      console.log(`Ship destroyed! No ships in hangar - respawned in free Ibis corvette. Lost ${currentShipName}, all cargo, modules, and ${lostCredits} credits.`);
     }
     
-    // Restore all defenses
-    player.shield = player.maxShield;
-    player.armor = player.maxArmor;
-    player.hull = player.maxHull;
-    player.cap = player.maxCap;
-    
-    // Apply death penalty
-    const deathPenalty = Math.floor(player.credits * 0.1); // Lose 10% of credits
-    player.credits = Math.max(0, player.credits - deathPenalty);
-    
-    // Clear target
+    // Clear target and commands
     selectedTarget = null;
+    player.targetCommand = null;
+    player.vx = 0;
+    player.vy = 0;
+    player.isWarping = false;
+    player.warpWarmup = 0;
+    player.warpTarget = null;
     
     updateUI();
   }
@@ -4481,6 +4987,38 @@
       ctx.font = 'bold 14px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(`JUMP IN ${(player.jumpWarmup/60).toFixed(1)}s`, canvas.width/2, 30);
+      ctx.textAlign = 'left';
+      ctx.font = '12px monospace';
+      ctx.fillStyle = '#f1f5f9';
+    }
+    
+    // Autopilot indicator
+    if(autopilotActive && autopilotRoute.length > 0){
+      ctx.fillStyle = '#06b6d4';
+      ctx.font = 'bold 13px monospace';
+      ctx.textAlign = 'center';
+      const jumpsRemaining = autopilotRoute.length - 1;
+      const nextSystem = autopilotRoute.length > 1 ? systems[autopilotRoute[1]].name : systems[autopilotDestination].name;
+      ctx.fillText(`🛸 AUTOPILOT: ${nextSystem} (${jumpsRemaining} jump${jumpsRemaining !== 1 ? 's' : ''})`, canvas.width/2, 60);
+      ctx.textAlign = 'left';
+      ctx.font = '12px monospace';
+      ctx.fillStyle = '#f1f5f9';
+    }
+    
+    // Display hostility status
+    if(player.isHostile){
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`⚠️ HOSTILE STATUS (${Math.round(player.hostility)}) - POLICE WILL ATTACK`, canvas.width/2, 80);
+      ctx.textAlign = 'left';
+      ctx.font = '12px monospace';
+      ctx.fillStyle = '#f1f5f9';
+    } else if(player.hostility > 0){
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 13px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`⚡ Hostility: ${Math.round(player.hostility)}/100`, canvas.width/2, 80);
       ctx.textAlign = 'left';
       ctx.font = '12px monospace';
       ctx.fillStyle = '#f1f5f9';
@@ -4788,7 +5326,16 @@
         if(player.inAnomaly && !n.inAnomaly) return;
         
         const d = Math.round(dist(player, n));
-        nearby.push({type:'npc', obj:n, dist:d, name:n.type});
+        // Create proper name based on faction and ship class
+        let shipName = '';
+        if(n.faction === 'police'){
+          if(n.shipClass === 'battlecruiser') shipName = 'Police Battlecruiser';
+          else if(n.shipClass === 'cruiser') shipName = 'Police Cruiser';
+          else shipName = 'Police Frigate';
+        } else {
+          shipName = n.type || 'Pirate'; // Fall back to existing type
+        }
+        nearby.push({type:'npc', obj:n, dist:d, name:shipName});
       });
       s.wrecks.forEach(w=>{
         // Skip if entity is in different anomaly than player
@@ -4816,6 +5363,15 @@
       
       for(let i = startIdx; i < endIdx; i++){
         const item = nearby[i];
+        
+        // Determine button color based on item type and faction
+        let buttonColor = '#1e3a4e'; // Default color
+        if(item.type === 'npc' && item.obj.faction === 'police'){
+          buttonColor = '#064e3b'; // Dark green for police
+        } else if(item.type === 'npc'){
+          buttonColor = '#4c0519'; // Dark red for pirates
+        }
+        
         const btn = {
           x: rightX + 10,
           y: oy,
@@ -4830,7 +5386,7 @@
           }
         };
         if(oy >= startY && oy + 18 <= overviewY + overviewHeight){
-          drawButton(btn, '#1e3a4e');
+          drawButton(btn, buttonColor);
           canvasButtons.push(btn);
         }
         oy += itemHeight;
@@ -5931,6 +6487,42 @@
       ctx.shadowBlur = 0;
     }
     
+    function drawPoliceShip(ctx, scale = 1) {
+      // Law enforcement design - symmetric and authoritative
+      ctx.fillStyle = '#0891b2'; // Cyan blue for police
+      ctx.beginPath();
+      ctx.moveTo(0, -15 * scale);
+      ctx.lineTo(10 * scale, -8 * scale);
+      ctx.lineTo(12 * scale, 8 * scale);
+      ctx.lineTo(8 * scale, 10 * scale);
+      ctx.lineTo(0, 12 * scale);
+      ctx.lineTo(-8 * scale, 10 * scale);
+      ctx.lineTo(-12 * scale, 8 * scale);
+      ctx.lineTo(-10 * scale, -8 * scale);
+      ctx.closePath();
+      ctx.fill();
+      
+      // White stripe accent (like police markings)
+      ctx.fillStyle = '#f0f9ff';
+      ctx.beginPath();
+      ctx.moveTo(0, -15 * scale);
+      ctx.lineTo(6 * scale, -2 * scale);
+      ctx.lineTo(0, 4 * scale);
+      ctx.lineTo(-6 * scale, -2 * scale);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Blue engine glow
+      ctx.fillStyle = `rgba(6, 182, 212, 0.9)`;
+      ctx.shadowBlur = 10 * scale;
+      ctx.shadowColor = '#06b6d4';
+      ctx.beginPath();
+      ctx.arc(-10 * scale, 9 * scale, 3 * scale, 0, Math.PI * 2);
+      ctx.arc(10 * scale, 9 * scale, 3 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    
     function drawBattlecruiser(ctx, color, scale = 1) {
       // Heavy battlecruiser - massive firepower platform
       ctx.fillStyle = color;
@@ -6193,16 +6785,25 @@
       ctx.translate(n.x, n.y);
       ctx.rotate(n.angle);
       
-      // Draw pirate ship
-      drawPirateShip(ctx, 1);
+      // Determine ship size based on class
+      let shipSize = 1; // Frigate default
+      if(n.shipClass === 'cruiser') shipSize = 1.5;
+      else if(n.shipClass === 'battlecruiser') shipSize = 2;
+      
+      // Draw ship based on faction
+      if(n.faction === 'police'){
+        drawPoliceShip(ctx, shipSize);
+      } else {
+        drawPirateShip(ctx, shipSize);
+      }
       
       ctx.restore();
       
       if(selectedTarget && selectedTarget.ref === n){
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = n.faction === 'police' ? '#06b6d4' : '#ef4444'; // Cyan for police, red for pirates
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(n.x, n.y, 20, 0, Math.PI*2);
+        ctx.arc(n.x, n.y, 20 * shipSize, 0, Math.PI*2);
         ctx.stroke();
       }
     });

@@ -31,7 +31,8 @@ const WEAPON_MODULES = {
     cpuUsage: 15,
     
     // Economy
-    price: 5000
+    price: 5000,
+    cargoSize: 5 // Cargo volume in m³
   },
   
   '150mm Railgun I': {
@@ -55,7 +56,8 @@ const WEAPON_MODULES = {
     powergridUsage: 3,
     cpuUsage: 20,
     
-    price: 15000
+    price: 15000,
+    cargoSize: 5
   },
   
   'Light Neutron Blaster I': {
@@ -79,7 +81,8 @@ const WEAPON_MODULES = {
     powergridUsage: 4,
     cpuUsage: 18,
     
-    price: 12000
+    price: 12000,
+    cargoSize: 5
   },
   
   'Light Beam Laser I': {
@@ -103,7 +106,8 @@ const WEAPON_MODULES = {
     powergridUsage: 3,
     cpuUsage: 12,
     
-    price: 10000
+    price: 10000,
+    cargoSize: 5
   },
   
   '200mm AutoCannon I': {
@@ -127,7 +131,8 @@ const WEAPON_MODULES = {
     powergridUsage: 2,
     cpuUsage: 8,
     
-    price: 8000
+    price: 8000,
+    cargoSize: 5
   },
   
   // ===== MISSILES =====
@@ -155,7 +160,8 @@ const WEAPON_MODULES = {
     powergridUsage: 1,
     cpuUsage: 25, // High CPU
     
-    price: 18000
+    price: 18000,
+    cargoSize: 10
   },
   
   // ===== MINING LASERS =====
@@ -180,7 +186,8 @@ const WEAPON_MODULES = {
     powergridUsage: 1,
     cpuUsage: 10,
     
-    price: 3000
+    price: 3000,
+    cargoSize: 0.1
   },
   
   'Miner II': {
@@ -202,7 +209,8 @@ const WEAPON_MODULES = {
     powergridUsage: 2,
     cpuUsage: 15,
     
-    price: 20000
+    price: 20000,
+    cargoSize: 0.1
   }
 };
 

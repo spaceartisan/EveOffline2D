@@ -1,5 +1,9 @@
 # EVE Offline 2D
 
+> **⚠️ 100% AI-GENERATED PROJECT**
+> 
+> This entire game was created by AI (GitHub Copilot) through conversational prompts. Every line of code, feature implementation, and game mechanic was generated entirely by artificial intelligence. No human wrote any of the source code.
+
 A vanilla JavaScript homage to EVE Online featuring true EVE-like mechanics:
 
 ## Features
@@ -58,9 +62,20 @@ A vanilla JavaScript homage to EVE Online featuring true EVE-like mechanics:
 - **Weapon fire** - Laser blast effects for combat
 - **Explosions** - Impact sounds when ships are destroyed
 - **Mining lasers** - Beam sound effects during ore extraction
-- **Gate jumps** - 10-second power-up sequence followed by jump whoosh
+- **Gate jumps** - Whoosh sound when jumping through stargates
 - **Warp drive** - Rising pitch on warp activation, falling pitch on arrival
-- Procedurally generated placeholder sounds (replace with real audio files in sfx/ folder)
+- **Gate warmup** - Building power-up sound during 10-second gate activation
+- **Smart audio loading** - Attempts to load audio files from sfx/ folder, falls back to procedural sounds if missing
+- **Volume controls** - Separate master, SFX, and BGM volume sliders
+
+**Loot System**
+- **Ship salvage** - Destroyed ships drop weapons, modules, ore, and metal scrap
+- **Faction-based loot** - Pirates drop more weapons, Police drop better modules
+- **Class-based drops** - Larger ships drop better equipment (Frigates 30%, Battlecruisers 60% drop chance)
+- **Weapon drops** - Railguns, blasters, lasers, autocannons, rocket launchers
+- **Module drops** - Shield boosters, armor repairers, afterburners, damage modifiers
+- **Proper cargo volumes** - All items use realistic cargo sizes (turrets 5m³, modules 2.5-10m³, miners 0.1m³)
+- **Wreck looting** - Approach wrecks to open cargo and transfer loot to your ship
 
 **Ship Systems**
 - Momentum-based flight physics with inertia

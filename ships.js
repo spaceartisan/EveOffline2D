@@ -250,6 +250,207 @@ const SHIP_CLASSES = {
     price: 1500000
   },
   
+  // ===== DESTROYERS =====
+  // Anti-frigate specialists with many weapon slots
+  
+  'Catalyst': {
+    class: 'Destroyer',
+    name: 'Catalyst',
+    faction: 'Gallente',
+    description: 'A destroyer with exceptional firepower against smaller targets',
+    
+    // Fitting slots
+    highSlots: 7,
+    mediumSlots: 2,
+    lowSlots: 2,
+    
+    // Movement
+    maxSpeed: 2.5,
+    sublightSpeed: 2.5,
+    warpSpeed: 3.5,
+    accel: 0.08,
+    turnRate: 0.035,
+    drag: 0.97,
+    
+    // Defense
+    maxShield: 200,
+    shieldRegen: 1.0,
+    maxArmor: 180,
+    maxHull: 130,
+    
+    // Offense
+    dmg: 25,
+    fireRate: 25,
+    maxRange: 600,
+    
+    // Resources
+    maxCap: 250,
+    capRegen: 2.5,
+    cargoCap: 200,
+    
+    // Economy
+    price: 180000
+  },
+  
+  'Coercer': {
+    class: 'Destroyer',
+    name: 'Coercer',
+    faction: 'Amarr',
+    description: 'An Amarr destroyer with devastating energy weapon arrays',
+    
+    // Fitting slots
+    highSlots: 8,
+    mediumSlots: 2,
+    lowSlots: 1,
+    
+    // Movement
+    maxSpeed: 2.3,
+    sublightSpeed: 2.3,
+    warpSpeed: 3.5,
+    accel: 0.07,
+    turnRate: 0.03,
+    drag: 0.97,
+    
+    // Defense
+    maxShield: 180,
+    shieldRegen: 0.9,
+    maxArmor: 220,
+    maxHull: 150,
+    
+    // Offense
+    dmg: 28,
+    fireRate: 28,
+    maxRange: 650,
+    
+    // Resources
+    maxCap: 280,
+    capRegen: 2.8,
+    cargoCap: 180,
+    
+    // Economy
+    price: 200000
+  },
+  
+  // ===== CRUISERS =====
+  // Versatile mid-sized warships
+  
+  'Vexor': {
+    class: 'Cruiser',
+    name: 'Vexor',
+    faction: 'Gallente',
+    description: 'A powerful Gallente cruiser with strong drone capabilities',
+    
+    // Fitting slots
+    highSlots: 4,
+    mediumSlots: 4,
+    lowSlots: 5,
+    
+    // Movement
+    maxSpeed: 2.2,
+    sublightSpeed: 2.2,
+    warpSpeed: 3.2,
+    accel: 0.07,
+    turnRate: 0.03,
+    drag: 0.96,
+    
+    // Defense
+    maxShield: 400,
+    shieldRegen: 2.0,
+    maxArmor: 250,
+    maxHull: 180,
+    
+    // Offense
+    dmg: 40,
+    fireRate: 35,
+    maxRange: 700,
+    
+    // Resources
+    maxCap: 500,
+    capRegen: 5.0,
+    cargoCap: 350,
+    
+    // Economy
+    price: 650000
+  },
+  
+  'Maller': {
+    class: 'Cruiser',
+    name: 'Maller',
+    faction: 'Amarr',
+    description: 'A heavily armored Amarr cruiser built for sustained combat',
+    
+    // Fitting slots
+    highSlots: 5,
+    mediumSlots: 3,
+    lowSlots: 5,
+    
+    // Movement
+    maxSpeed: 2.0,
+    sublightSpeed: 2.0,
+    warpSpeed: 3.2,
+    accel: 0.06,
+    turnRate: 0.028,
+    drag: 0.96,
+    
+    // Defense
+    maxShield: 350,
+    shieldRegen: 1.8,
+    maxArmor: 350,
+    maxHull: 200,
+    
+    // Offense
+    dmg: 45,
+    fireRate: 38,
+    maxRange: 750,
+    
+    // Resources
+    maxCap: 550,
+    capRegen: 5.5,
+    cargoCap: 300,
+    
+    // Economy
+    price: 700000
+  },
+  
+  'Caracal': {
+    class: 'Cruiser',
+    name: 'Caracal',
+    faction: 'Caldari',
+    description: 'A missile-focused Caldari cruiser with powerful shields',
+    
+    // Fitting slots
+    highSlots: 5,
+    mediumSlots: 5,
+    lowSlots: 3,
+    
+    // Movement
+    maxSpeed: 2.4,
+    sublightSpeed: 2.4,
+    warpSpeed: 3.2,
+    accel: 0.075,
+    turnRate: 0.032,
+    drag: 0.96,
+    
+    // Defense
+    maxShield: 500,
+    shieldRegen: 2.5,
+    maxArmor: 200,
+    maxHull: 150,
+    
+    // Offense
+    dmg: 42,
+    fireRate: 36,
+    maxRange: 720,
+    
+    // Resources
+    maxCap: 520,
+    capRegen: 5.2,
+    cargoCap: 320,
+    
+    // Economy
+    price: 680000
+  },
+  
   // ===== BATTLESHIPS =====
   // Massive capital ships with devastating firepower
   
@@ -294,14 +495,14 @@ const SHIP_CLASSES = {
   },
   
   // ===== FUTURE SHIP CLASSES =====
-  // Add destroyers, cruisers, etc. here following the same format
+  // Add carriers, dreadnoughts, etc. here following the same format
   // Example:
   /*
-  'Catalyst': {
-    class: 'Destroyer',
-    name: 'Catalyst',
-    description: 'A destroyer-class ship',
-    maxSpeed: 2.5,
+  'Thanatos': {
+    class: 'Carrier',
+    name: 'Thanatos',
+    description: 'A carrier-class capital ship',
+    maxSpeed: 0.8,
     // ... etc
   }
   */

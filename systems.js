@@ -8,28 +8,28 @@ const SYSTEM_DATA = [
     station: { x: 10000, y: 10000, name: 'Jita IV - Caldari Navy Assembly Plant' }, 
     mapX: 380, mapY: 200, color: '#3b82f6', category: 'navy',
     forSale: ['Core Probe Launcher I','125mm Railgun I', '150mm Railgun I', 'Light Beam Laser I', 'Rocket Launcher I', 'Miner I', 'Miner II', 'Small Shield Booster I', 'Small Shield Extender I', 'Shield Recharger I', 'Damage Control I', 'Micro Auxiliary Power Core I', 'Capacitor Battery I', 'Capacitor Recharger I', 'Overdrive Injector System I', 'Nanofiber Internal Structure I', 'Ballistic Control System I', 'Tracking Enhancer I', 'Cargo Scanner I'],
-    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Rifter', 'Ferox', 'Apocalypse']
+    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Rifter', 'Catalyst', 'Coercer', 'Vexor', 'Maller', 'Caracal', 'Ferox', 'Apocalypse']
   },            // 0 - Major trade hub, full selection
   { 
     name: 'Amarr', security: 1.0, gates: [0, 2, 3, 5], 
     station: { x: 10000, y: 10000, name: 'Amarr VIII - Emperor Family Academy' }, 
     mapX: 310, mapY: 270, color: '#a855f7', category: 'academy',
     forSale: ['Light Beam Laser I', '125mm Railgun I', 'Rocket Launcher I', 'Miner I', 'Small Shield Booster I', 'Small Armor Repairer I', 'Small Armor Plate I', 'Adaptive Nano Plating I', 'Damage Control I', 'Capacitor Battery I', 'Capacitor Recharger I', 'Micro Auxiliary Power Core I', 'Ballistic Control System I', 'Heat Sink I', 'Tracking Enhancer I'],
-    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Apocalypse']
+    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Coercer', 'Maller', 'Apocalypse']
   },       // 1 - Academy, starter ships and Amarr battleship
   { 
     name: 'Dodixie', security: 0.9, gates: [0, 1, 4, 6], 
     station: { x: 10000, y: 10000, name: 'Dodixie IX - Moon 20 - Federation Navy' }, 
     mapX: 450, mapY: 270, color: '#3b82f6', category: 'navy',
     forSale: ['Light Neutron Blaster I', '150mm Railgun I', 'Rocket Launcher I', 'Miner I', 'Small Shield Booster I', 'Small Armor Repairer I', 'Shield Recharger I', 'Damage Control I', 'Afterburner I', 'Overdrive Injector System I', 'Nanofiber Internal Structure I', 'Magnetic Field Stabilizer I', 'Tracking Enhancer I', 'Cargo Scanner I'],
-    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Ferox']
+    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Catalyst', 'Vexor', 'Ferox']
   },  // 2 - Navy station, Gallente ships
   { 
     name: 'Rens', security: 0.9, gates: [1, 7], 
     station: { x: 10000, y: 10000, name: 'Rens VI - Moon 8 - Brutor Tribe Treasury' }, 
     mapX: 240, mapY: 290, color: '#f59e0b', category: 'treasury',
     forSale: ['200mm AutoCannon I', '125mm Railgun I', 'Rocket Launcher I', 'Miner I', 'Small Shield Extender I', 'Shield Recharger I', 'Damage Control I', 'Overdrive Injector System I', 'Afterburner I', 'Capacitor Battery I', 'Tracking Enhancer I'],
-    shipsForSale: ['Ibis', 'Velator', 'Rifter', 'Atron']
+    shipsForSale: ['Ibis', 'Velator', 'Rifter', 'Atron', 'Catalyst']
   },         // 3 - Minmatar hub, Rifter focus
   { 
     name: 'Hek', security: 0.8, gates: [2, 8], 
@@ -43,7 +43,7 @@ const SYSTEM_DATA = [
     station: { x: 10000, y: 10000, name: 'Perimeter Trading Hub' }, 
     mapX: 330, mapY: 350, color: '#10b981', category: 'trading',
     forSale: ['125mm Railgun I', 'Light Beam Laser I', 'Miner I', 'Small Shield Booster I', 'Small Shield Extender I', 'Damage Control I', 'Capacitor Battery I', 'Capacitor Recharger I', 'Micro Auxiliary Power Core I', 'Overdrive Injector System I', 'Cargo Scanner I', 'Expanded Cargohold I'],
-    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Rifter', 'Ferox']
+    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Rifter', 'Catalyst', 'Coercer', 'Vexor', 'Caracal', 'Ferox']
   },                       // 5 - Trading hub, good variety
   { 
     name: 'Oursulaert', security: 0.7, gates: [2, 10], 
@@ -73,7 +73,7 @@ const SYSTEM_DATA = [
     station: { x: 10000, y: 10000, name: 'Amamake II - Republic Fleet Assembly' }, 
     mapX: 300, mapY: 410, color: '#3b82f6', category: 'navy',
     forSale: ['200mm AutoCannon I', 'Rocket Launcher I', 'Light Neutron Blaster I', 'Small Shield Booster I', 'Small Armor Repairer I', 'Afterburner I', 'Damage Control I', 'Nanofiber Internal Structure I', 'Ballistic Control System I', 'Tracking Enhancer I'],
-    shipsForSale: ['Ibis', 'Velator', 'Rifter', 'Ferox']
+    shipsForSale: ['Ibis', 'Velator', 'Rifter', 'Catalyst', 'Caracal', 'Ferox']
   },         // 9 - Fleet assembly, Minmatar ships
   { 
     name: 'Rancer', security: 0.4, gates: [6, 14], 
@@ -101,7 +101,7 @@ const SYSTEM_DATA = [
     station: { x: 10000, y: 10000, name: 'Huola Factional Warfare Base' }, 
     mapX: 350, mapY: 500, color: '#ef4444', category: 'military',
     forSale: ['Light Beam Laser I', '150mm Railgun I', 'Rocket Launcher I', 'Small Armor Repairer I', 'Small Armor Plate I', 'Afterburner I', 'Damage Control I', 'Adaptive Nano Plating I', 'Heat Sink I', 'Ballistic Control System I'],
-    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Ferox']
+    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Coercer', 'Maller', 'Ferox']
   },                   // 13 - Military base, combat ships
   
   // Null Security Space (0.0) - Outer edge (14-19)
@@ -124,7 +124,7 @@ const SYSTEM_DATA = [
     station: { x: 10000, y: 10000, name: '1DQ1-A Keepstar' }, 
     mapX: 590, mapY: 460, color: '#fbbf24', category: 'citadel',
     forSale: ['Light Neutron Blaster I', '150mm Railgun I', 'Rocket Launcher I', 'Miner II', 'Small Shield Booster I', 'Small Armor Repairer I', 'Afterburner I', 'Damage Control I', 'Ballistic Control System I', 'Tracking Enhancer I', 'Magnetic Field Stabilizer I'],
-    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Rifter', 'Ferox', 'Apocalypse']
+    shipsForSale: ['Ibis', 'Velator', 'Atron', 'Tristan', 'Rifter', 'Catalyst', 'Coercer', 'Vexor', 'Maller', 'Caracal', 'Ferox', 'Apocalypse']
   },                              // 16 - Keepstar citadel, full selection
   { 
     name: 'Delve', security: 0.0, gates: [13, 16], 
@@ -145,7 +145,7 @@ const SYSTEM_DATA = [
     station: { x: 10000, y: 10000, name: 'Catch Staging Point' }, 
     mapX: 100, mapY: 420, color: '#f97316', category: 'staging',
     forSale: ['200mm AutoCannon I', 'Rocket Launcher I', 'Small Armor Plate I', 'Small Shield Extender I', 'Afterburner I', 'Damage Control I', 'Ballistic Control System I'],
-    shipsForSale: ['Ibis', 'Velator', 'Rifter', 'Ferox']
+    shipsForSale: ['Ibis', 'Velator', 'Rifter', 'Catalyst', 'Caracal', 'Ferox']
   }                            // 19 - Staging area, combat ships
 ];
 

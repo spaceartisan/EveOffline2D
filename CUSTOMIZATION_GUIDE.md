@@ -158,7 +158,8 @@ Add to the `WEAPON_MODULES` object:
 'YourWeaponName': {
   type: 'weapon',
   category: 'turret',  // or 'missile', 'mining'
-  size: 'small',       // or 'medium', 'large'
+  slotType: 'high',
+  size: 'small',       // Fitting size (small, medium, large)
   name: 'Your Weapon Name',
   description: 'A description of your weapon',
   
@@ -169,13 +170,26 @@ Add to the `WEAPON_MODULES` object:
   optimalRange: 600,   // Range for best accuracy
   capacitorUse: 5,
   
+  // Accuracy by range brackets
+  accuracyClose: 0.90,   // 0-65% of optimal range
+  accuracyMedium: 0.70,  // 65-85% of optimal range
+  accuracyLong: 0.35,    // 85-100% of max range
+  
   // Fitting Requirements
   powergridUsage: 15,
   cpuUsage: 25,
   
   // Economy
-  price: 25000
+  price: 25000,
+  cargoSize: 5  // Volume in m³ when in cargo
 }
+```
+
+### Cargo Size Guidelines
+- **Small turrets**: 5 m³
+- **Missile launchers**: 10 m³
+- **Mining lasers**: 0.1 m³
+- The `cargoSize` property determines volume when looted or stored, separate from fitting `size`
 ```
 
 ### Mining Lasers
@@ -219,13 +233,16 @@ Mining lasers are weapons with special properties:
 
 ### Adding a New Module
 
-Add to the appropriate section (`SHIELD_MODULES`, `ARMOR_MODULES`, etc.):
+Add to the appropriate section in `SUBSYSTEM_MODULES`:
 
 ```javascript
 'YourModuleName': {
-  name: 'Your Module Name',
   type: 'passive',  // or 'active'
   category: 'shield',  // shield, armor, propulsion, capacitor, damage, utility
+  slotType: 'medium',  // high, medium, low
+  size: 'small',       // Fitting size
+  name: 'Your Module Name',
+  description: 'Module description',
   
   // Bonuses (use relevant ones)
   shieldBonus: 200,
@@ -243,10 +260,17 @@ Add to the appropriate section (`SHIELD_MODULES`, `ARMOR_MODULES`, etc.):
   
   // Economy
   price: 30000,
-  
-  description: 'Module description'
+  cargoSize: 2.5  // Volume in m³ when in cargo
 }
 ```
+
+### Module Cargo Size Guidelines
+- **Small active modules (boosters, repairers)**: 2.5 m³
+- **Shield extenders**: 5 m³
+- **Armor plates**: 10 m³
+- **Propulsion modules**: 5 m³
+- **Damage modifiers**: 2.5 m³
+- **Cargo expanders**: 10 m³
 
 ### Module Types
 - **Passive modules:** Always active, no capacitor cost
@@ -319,38 +343,89 @@ Asteroids respawn at their original location with the same ore type and amount.
 
 **File:** `items.js`
 
+### Loot System
+
+When NPCs are destroyed, they drop loot based on **loot tables** defined in `items.js`. The system uses ship class and faction to determine drops.
+
+### Loot Table Structure
+
+```javascript
+LOOT_TABLES = {
+  frigate: {
+    weapons: [
+      { name: '125mm Railgun I', chance: 0.25 },
+      { name: 'Light Beam Laser I', chance: 0.18 }
+    ],
+    modules: [
+      { name: 'Small Shield Booster I', chance: 0.20 },
+      { name: '1MN Afterburner I', chance: 0.25 }
+    ],
+    dropChance: 0.30,  // 30% chance to drop items
+    maxDrops: 2        // Up to 2 items can drop
+  }
+  // Add cruiser, battlecruiser, etc.
+}
+```
+
+### Faction Modifiers
+
+Factions affect loot drop rates:
+
+```javascript
+factionModifiers: {
+  pirate: {
+    dropChanceMultiplier: 1.1,     // 10% more likely to drop
+    weaponChanceMultiplier: 1.2    // 20% more weapons
+  },
+  police: {
+    dropChanceMultiplier: 0.9,     // 10% less likely to drop
+    weaponChanceMultiplier: 0.7,   // 30% fewer weapons
+    moduleChanceMultiplier: 1.3    // 30% more modules
+  }
+}
+```
+
+### Adding Items to Loot Tables
+
+1. Add the weapon/module to `weapons.js` or `modules.js`
+2. Add it to the appropriate loot table in `items.js`:
+
+```javascript
+// Add to frigate loot table
+weapons: [
+  { name: 'Your New Gun', chance: 0.15 }  // 15% weight
+]
+```
+
+### Loot Drop Chances by Ship Class
+- **Frigates**: 30% drop chance, 1-2 items
+- **Destroyers**: 40% drop chance, 1-3 items
+- **Cruisers**: 50% drop chance, 1-4 items
+- **Battlecruisers**: 60% drop chance, 1-5 items
+
 ### Adding Metal Scrap Types
 
 Add to `METAL_TYPES`:
 
 ```javascript
 'YourMetalName': {
-  name: 'Your Metal Name',
   price: 50,
   size: 0.5,
-  color: '#silver'
+  color: '#silver',
+  description: 'Metal scrap description',
+  shipClass: ['frigate', 'destroyer']  // Which ships drop this
 }
 ```
 
-### Modifying Loot Drops
+### Modifying Ore/Metal Drops
 
-In `main.js`, find NPC death handler (~line 2015):
-
-```javascript
-// Ore drops (current: 3-8 units)
-const oreCount = Math.floor(rand(3, 8));
-
-// Metal scrap drops (current: 2-5 units)
-const metalCount = Math.floor(rand(2, 5));
-```
-
-### Wreck Despawn Timer
-
-In `main.js`, find the Wreck class (~line 137):
+NPC ships always drop ore and metal. The `generateLoot()` function in `items.js` handles weapon/module drops.
 
 ```javascript
-this.despawnTimer = 18000;  // 5 minutes (300 seconds * 60 ticks)
-// Change to adjust despawn time
+// In main.js, NPC death handler (~line 4580):
+// Ore: 3-8 units of random type
+// Metal: 2-5 units for frigates, 8-14 for battlecruisers
+// Weapons/Modules: Based on loot tables
 ```
 
 ---
@@ -693,6 +768,74 @@ const rightWidth = 240;             // Panel width
 ## Game Mechanics
 
 **File:** `main.js`
+
+### Audio System
+
+The game uses a smart audio loading system with automatic fallbacks.
+
+**Audio File Structure:**
+```
+sfx/
+├── thrust.mp3
+├── weapon_fire.mp3
+├── explosion.mp3
+├── mining.mp3
+├── gate_jump.mp3
+├── warp_enter.mp3
+├── warp_exit.mp3
+└── gate_warmup.mp3
+```
+
+**How It Works:**
+1. Game attempts to load audio file from `sfx/` folder
+2. If file doesn't exist, automatically uses procedural sound generation
+3. No errors, no breaks - seamless fallback
+
+**Replacing Audio:**
+Simply drop your MP3 file into the `sfx/` folder with the correct name. The game will automatically use it!
+
+**Volume Controls:**
+In `main.js` (~line 14):
+```javascript
+sounds = {
+  masterVolume: 1.0,  // Master volume (0.0 - 1.0)
+  sfxVolume: 0.3,     // Sound effects volume
+  bgmVolume: 0.3      // Background music volume
+}
+```
+
+### Starting Inventory
+
+**File:** `main.js` (~line 805)
+
+Add items to player cargo at game start:
+
+```javascript
+const startingItems = [
+  'Miner I',              // Mining laser
+  '125mm Railgun I',      // Combat weapon
+  'Small Shield Booster I' // Module
+];
+```
+
+The `createInventoryItem()` helper automatically:
+- Looks up item from weapons/modules
+- Determines item type (weapon or module)
+- Uses correct cargo size
+- Includes all properties for display
+
+**Adding Multiple Items:**
+```javascript
+const startingItems = [
+  'Miner I',
+  '125mm Railgun I',
+  '125mm Railgun I',  // Can add duplicates
+  'Small Shield Booster I',
+  '1MN Afterburner I'
+];
+```
+
+No need to specify type or size - the system handles it automatically!
 
 ### Warp Speed & Cooldowns
 

@@ -22,7 +22,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 2,
     cpuUsage: 20,
     
-    price: 8000
+    price: 8000,
+    cargoSize: 2.5
   },
   
   'Small Shield Extender I': {
@@ -38,7 +39,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 15,
     
-    price: 6000
+    price: 6000,
+    cargoSize: 5
   },
   
   'Shield Recharger I': {
@@ -54,7 +56,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 12,
     
-    price: 7000
+    price: 7000,
+    cargoSize: 2.5
   },
   
   // ===== ARMOR MODULES =====
@@ -74,7 +77,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 3,
     cpuUsage: 18,
     
-    price: 9000
+    price: 9000,
+    cargoSize: 2.5
   },
   
   '200mm Armor Plate I': {
@@ -91,7 +95,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 2,
     cpuUsage: 8,
     
-    price: 5000
+    price: 5000,
+    cargoSize: 10
   },
   
   // ===== PROPULSION MODULES =====
@@ -111,7 +116,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 20,
     
-    price: 12000
+    price: 12000,
+    cargoSize: 5
   },
   
   'Overdrive Injector I': {
@@ -127,7 +133,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 10,
     
-    price: 8000
+    price: 8000,
+    cargoSize: 2.5
   },
   
   // ===== CAPACITOR MODULES =====
@@ -145,7 +152,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 0,
     cpuUsage: 15,
     
-    price: 7000
+    price: 7000,
+    cargoSize: 2.5
   },
   
   'Capacitor Battery I': {
@@ -161,7 +169,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 12,
     
-    price: 6000
+    price: 6000,
+    cargoSize: 2.5
   },
   
   // ===== DAMAGE MODULES =====
@@ -179,7 +188,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 18,
     
-    price: 10000
+    price: 10000,
+    cargoSize: 2.5
   },
   
   'Heat Sink I': {
@@ -195,7 +205,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 18,
     
-    price: 10000
+    price: 10000,
+    cargoSize: 2.5
   },
   
   'Gyrostabilizer I': {
@@ -211,7 +222,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 18,
     
-    price: 10000
+    price: 10000,
+    cargoSize: 2.5
   },
   
   'Ballistic Control System I': {
@@ -227,7 +239,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 18,
     
-    price: 10000
+    price: 10000,
+    cargoSize: 2.5
   },
   
   // ===== UTILITY MODULES =====
@@ -245,7 +258,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 0,
     cpuUsage: 8,
     
-    price: 5000
+    price: 5000,
+    cargoSize: 10
   },
   
   'Warp Core Stabilizer I': {
@@ -261,7 +275,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 15,
     
-    price: 15000
+    price: 15000,
+    cargoSize: 2.5
   },
   
   'Core Probe Launcher I': {
@@ -277,7 +292,8 @@ const SUBSYSTEM_MODULES = {
     powergridUsage: 1,
     cpuUsage: 20,
     
-    price: 25000
+    price: 25000,
+    cargoSize: 5
   }
 };
 
